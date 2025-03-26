@@ -1,4 +1,28 @@
 ###############################################################################
+# Análisis de Difusión de Habilidades entre Ocupaciones
+###############################################################################
+#
+# Este código analiza cómo las habilidades se difunden entre diferentes ocupaciones
+# a lo largo del tiempo, utilizando datos de O*NET (Occupational Information Network).
+# 
+# El análisis se basa en el concepto de Ventaja Comparativa Revelada (RCA) para 
+# identificar cuándo una ocupación utiliza efectivamente una habilidad (RCA > 1).
+# Luego, rastrea cómo estas habilidades se "difunden" de unas ocupaciones a otras
+# en diferentes períodos de tiempo.
+#
+# El código realiza las siguientes tareas principales:
+# 1. Carga y prepara datos de habilidades, conocimientos y capacidades
+# 2. Calcula la RCA para cada combinación de ocupación-habilidad-año
+# 3. Identifica patrones de difusión de habilidades entre ocupaciones
+# 4. Analiza cómo las diferencias educativas y salariales afectan la difusión
+# 5. Visualiza los resultados mediante modelos de regresión
+#
+# Autor: Adaptado para el repositorio skill_diffusion
+# Fecha: Marzo 2025
+#
+###############################################################################
+
+###############################################################################
 # Required libraries
 ###############################################################################
 library(data.table)
@@ -7,25 +31,28 @@ library(progress)
 library(ggplot2)
 library(patchwork)
 library(viridis)
-
+library(here)  # Para manejar rutas de archivos de forma relativa
 
 ###############################################################################
 # Data loading
 ###############################################################################
 
-list.files("C:/Users/qramo/Downloads/db_29_2_text/db_29_2_text")
+# Verificar los archivos disponibles en la carpeta data
+list.files(here("data"))
 
-# Cargar los archivos principales
-skills <- read.delim("C:/Users/qramo/Downloads/db_29_2_text/db_29_2_text/Skills.txt", sep="\t")
-abilities <- read.delim("C:/Users/qramo/Downloads/db_29_2_text/db_29_2_text/Abilities.txt", sep="\t")
-knowledge <- read.delim("C:/Users/qramo/Downloads/db_29_2_text/db_29_2_text/Knowledge.txt", sep="\t")
-work_activities <- read.delim("C:/Users/qramo/Downloads/db_29_2_text/db_29_2_text/Work Activities.txt", sep="\t")
-work_styles <- read.delim("C:/Users/qramo/Downloads/db_29_2_text/db_29_2_text/Work Styles.txt", sep="\t")
+# Cargar los archivos principales usando here para rutas relativas
+skills <- read.delim(here("data", "Skills.txt"), sep="\t")
+abilities <- read.delim(here("data", "Abilities.txt"), sep="\t")
+knowledge <- read.delim(here("data", "Knowledge.txt"), sep="\t")
+work_activities <- read.delim(here("data", "Work Activities.txt"), sep="\t")
+work_styles <- read.delim(here("data", "Work Styles.txt"), sep="\t")
+occupation_data <- read.delim(here("data", "Occupation Data.txt"), sep="\t")
 
-# También necesitarás los datos de ocupaciones
-occupation_data <- read.delim("C:/Users/qramo/Downloads/db_29_2_text/db_29_2_text/Occupation Data.txt", sep="\t")
 
-# Review
+# Nota: Si no se encuentra "Occupation Data.txt" en el repositorio,
+# el código creará datos simulados para ocupaciones
+
+# Revisar la estructura de los datos cargados
 glimpse(skills)
 glimpse(abilities)
 glimpse(knowledge)
@@ -35,6 +62,9 @@ glimpse(occupation_data)
 
 ###############################################################################
 # Function to create skill diffusion dataset
+###############################################################################
+###############################################################################
+# Function to create skill diffusion dataset - OPTIMIZED VERSION
 ###############################################################################
 create_skill_diffusion_network <- function(skills_data, occupation_data = NULL, batch_size = 100) {
   message("Preparing skills data...")
@@ -212,45 +242,61 @@ create_skill_diffusion_network <- function(skills_data, occupation_data = NULL, 
         next
       }
       
-      # For each skill in data_prev
+      # Process each skill with efficient chunking
       diffusion_by_year <- rbindlist(lapply(unique(data_prev$Element.Name), function(skill) {
         
-        datos_prev <- data_prev[Element.Name == skill,
-                                .(O.NET.SOC.Code, rca_source = rca, data_value_source = Data.Value)]
-        
-        datos_curr <- data_curr[Element.Name == skill,
-                                .(O.NET.SOC.Code, rca_target = rca, data_value_target = Data.Value)]
-        
-        occs_prev <- unique(datos_prev$O.NET.SOC.Code)
-        occs_curr <- unique(datos_curr$O.NET.SOC.Code)
-        
-        # Occupations that adopted the skill in the current year
-        occs_nuevas <- setdiff(occs_curr, occs_prev)
-        if (length(occs_nuevas) == 0) return(NULL)
-        
-        # Create connections between occupations that had the skill and those that adopted it
-        edges <- data.table::CJ(source = occs_prev, target = occs_nuevas, 
-                                allow.cartesian=TRUE)
-        
-        # Save both emission and adoption years
-        edges[, `:=`(
-          Element.Name = skill, 
-          year_emission = year_prev,
-          year_adoption = year_curr
-        )]
-        
-        # Merge with rca_source and data_value_source
-        edges <- merge(edges, datos_prev, 
-                       by.x = "source", by.y = "O.NET.SOC.Code")
-        # Merge with rca_target and data_value_target
-        edges <- merge(edges, datos_curr, 
-                       by.x = "target", by.y = "O.NET.SOC.Code")
-        
-        # Connection weight based on RCA
-        edges[, weight := sqrt(rca_source * rca_target)]
-        
-        edges
-      }))
+        # Try-catch to handle potential errors with specific skills
+        tryCatch({
+          datos_prev <- data_prev[Element.Name == skill,
+                                  .(O.NET.SOC.Code, rca_source = rca, data_value_source = Data.Value)]
+          
+          datos_curr <- data_curr[Element.Name == skill,
+                                  .(O.NET.SOC.Code, rca_target = rca, data_value_target = Data.Value)]
+          
+          occs_prev <- unique(datos_prev$O.NET.SOC.Code)
+          occs_curr <- unique(datos_curr$O.NET.SOC.Code)
+          
+          # Occupations that adopted the skill in the current year
+          occs_nuevas <- setdiff(occs_curr, occs_prev)
+          if (length(occs_nuevas) == 0) return(NULL)
+          
+          # IMPROVED APPROACH: Process in chunks to handle large numbers of occupations
+          # Define chunk size based on the number of occupations
+          max_combinations <- 10000  # Maximum combinations to process at once
+          
+          # Calculate total number of possible combinations
+          total_combinations <- length(occs_prev) * length(occs_nuevas)
+          
+          # If total combinations are manageable, process at once
+          if (total_combinations <= max_combinations) {
+            edges <- process_occupation_chunk(occs_prev, occs_nuevas, skill, year_prev, year_curr,
+                                              datos_prev, datos_curr)
+            return(edges)
+          } else {
+            # Process in chunks if combinations are too large
+            # Determine chunk sizes
+            chunk_size_prev <- min(length(occs_prev), ceiling(sqrt(max_combinations)))
+            chunk_size_nuevas <- min(length(occs_nuevas), ceiling(sqrt(max_combinations)))
+            
+            # Split into chunks
+            chunks_prev <- split(occs_prev, ceiling(seq_along(occs_prev)/chunk_size_prev))
+            chunks_nuevas <- split(occs_nuevas, ceiling(seq_along(occs_nuevas)/chunk_size_nuevas))
+            
+            # Process each chunk combination
+            all_chunks <- rbindlist(lapply(chunks_prev, function(chunk_prev) {
+              rbindlist(lapply(chunks_nuevas, function(chunk_nuevas) {
+                process_occupation_chunk(chunk_prev, chunk_nuevas, skill, year_prev, year_curr,
+                                         datos_prev, datos_curr)
+              }), fill = TRUE)
+            }), fill = TRUE)
+            
+            return(all_chunks)
+          }
+        }, error = function(e) {
+          warning(sprintf("Error processing skill '%s': %s", skill, e$message))
+          return(NULL)  # Return NULL on error to skip this skill
+        })
+      }), fill = TRUE)  # rbindlist with fill=TRUE to handle varying columns
       
       pb_batch_years$tick()
       batch_results_year[[idx_year]] <- diffusion_by_year
@@ -313,6 +359,7 @@ create_skill_diffusion_network <- function(skills_data, occupation_data = NULL, 
   
   # Unify all results
   message("\nCombining final results...")
+  # Use fill=TRUE to handle potential column differences across batches
   final_results <- rbindlist(all_results, use.names = TRUE, fill = TRUE)
   
   if (is.null(final_results) || nrow(final_results) == 0) {
@@ -574,6 +621,360 @@ create_skill_diffusion_network <- function(skills_data, occupation_data = NULL, 
   return(final_results)
 }
 
+# Helper function to process chunks of occupations
+process_occupation_chunk <- function(occs_prev, occs_nuevas, skill, year_prev, year_curr,
+                                     datos_prev, datos_curr) {
+  # Create edges table manually
+  edges <- data.table(
+    source = rep(occs_prev, each = length(occs_nuevas)),
+    target = rep(occs_nuevas, times = length(occs_prev))
+  )
+  
+  # Add metadata
+  edges[, `:=`(
+    Element.Name = skill,
+    year_emission = year_prev,
+    year_adoption = year_curr
+  )]
+  
+  # Use efficient join operations with key indexes
+  setindex(datos_prev, O.NET.SOC.Code)
+  setindex(datos_curr, O.NET.SOC.Code)
+  
+  # First merge with source data - use safe join with allow.cartesian
+  edges <- merge(edges, datos_prev, 
+                 by.x = "source", by.y = "O.NET.SOC.Code",
+                 allow.cartesian = TRUE)
+  
+  # Then merge with target data
+  edges <- merge(edges, datos_curr, 
+                 by.x = "target", by.y = "O.NET.SOC.Code",
+                 allow.cartesian = TRUE)
+  
+  # Calculate weight
+  edges[, weight := sqrt(rca_source * rca_target)]
+  
+  return(edges)
+}
+
+###############################################################################
+# Function to visualize regression effects - IMPROVED VERSION
+###############################################################################
+visualize_model_effects <- function(model, data) {
+  # Extract coefficients
+  coefs <- coef(model)
+  
+  # Coefficients for educational distance
+  coef_education <- coefs["education_distance_signed"]
+  coef_education_sq <- coefs["I(education_distance_signed^2)"]
+  
+  # Coefficients for wage distance
+  coef_wage <- coefs["wage_distance_signed"]
+  coef_wage_sq <- coefs["I(wage_distance_signed^2)"]
+  
+  # Calculate critical points
+  critical_edu <- -coef_education / (2 * coef_education_sq)
+  critical_wage <- -coef_wage / (2 * coef_wage_sq)
+  
+  # Get range of values for variables
+  edu_range <- seq(min(data$education_distance_signed, na.rm = TRUE),
+                   max(data$education_distance_signed, na.rm = TRUE),
+                   length.out = 100)
+  
+  wage_range <- seq(min(data$wage_distance_signed, na.rm = TRUE),
+                    max(data$wage_distance_signed, na.rm = TRUE),
+                    length.out = 100)
+  
+  # Create plots for each effect
+  
+  # Get actual years from the data
+  actual_years <- sort(unique(data$year_adoption))
+  
+  # Select a subset of years (e.g., every 5 years or at most 5 years total)
+  years_step <- max(1, ceiling(length(actual_years) / 5))
+  plot_years <- actual_years[seq(1, length(actual_years), by = years_step)]
+  
+  message(paste("Creating visualization for years:", paste(plot_years, collapse=", ")))
+  
+  # Extract model information to handle prediction correctly
+  model_terms <- attr(model$terms, "term.labels")
+  year_terms <- grep("factor\\(year_adoption\\)", model_terms)
+  year_values <- actual_years
+  
+  # 1. Effect of educational distance by year
+  message("Creating educational distance effect plots by year...")
+  edu_plots <- list()
+  
+  for (yr in plot_years) {
+    # Create prediction data for this year with all necessary variables
+    pred_data <- expand.grid(
+      education_distance_signed = edu_range,
+      wage_distance_signed = 0,  # Hold at 0 to isolate effect
+      year_adoption = yr
+    )
+    
+    # Convert year_adoption to factor with all levels found in the original data
+    pred_data$year_adoption <- factor(pred_data$year_adoption, levels = actual_years)
+    
+    # Safe prediction using model.matrix to handle factors correctly
+    X <- model.matrix(~ education_distance_signed + 
+                        wage_distance_signed + 
+                        I(education_distance_signed^2) + 
+                        I(wage_distance_signed^2) + 
+                        factor(year_adoption), 
+                      data = pred_data)
+    
+    # Predict values safely
+    tryCatch({
+      # Use only the columns that match the coefficient names
+      coef_names <- names(coefs)
+      X_matched <- X[, colnames(X) %in% coef_names, drop = FALSE]
+      
+      # Add intercept if missing
+      if (!("(Intercept)" %in% colnames(X_matched)) && "(Intercept)" %in% coef_names) {
+        X_matched <- cbind(1, X_matched)
+        colnames(X_matched)[1] <- "(Intercept)"
+      }
+      
+      # Keep only coefficients that match columns in X_matched
+      coefs_matched <- coefs[names(coefs) %in% colnames(X_matched)]
+      
+      # Calculate predicted values manually
+      linear_pred <- as.numeric(X_matched %*% coefs_matched)
+      pred_data$predicted <- exp(linear_pred)  # Apply exponential for Poisson link
+      
+      # Create plot
+      p <- ggplot(pred_data, aes(x = education_distance_signed, y = predicted)) +
+        geom_line(size = 1.2, color = "#3366CC") +
+        geom_vline(xintercept = critical_edu, linetype = "dashed", color = "red") +
+        labs(title = paste("Effect of Educational Distance in", yr),
+             subtitle = paste("Critical point at x =", round(critical_edu, 2)),
+             x = "Educational Distance (signed)",
+             y = "Predicted Diffusion (count)") +
+        theme_minimal(base_size = 12) +
+        theme(
+          plot.title = element_text(face = "bold", size = 14),
+          plot.subtitle = element_text(size = 12),
+          axis.title = element_text(face = "bold"),
+          panel.grid.minor = element_blank()
+        )
+      
+      edu_plots[[as.character(yr)]] <- p
+    }, error = function(e) {
+      message(sprintf("Error creating educational plot for year %d: %s", yr, e$message))
+    })
+  }
+  
+  # 2. Effect of wage distance by year
+  message("Creating wage distance effect plots by year...")
+  wage_plots <- list()
+  
+  for (yr in plot_years) {
+    # Create prediction data for this year with all necessary variables
+    pred_data <- expand.grid(
+      education_distance_signed = 0,  # Hold at 0 to isolate effect
+      wage_distance_signed = wage_range,
+      year_adoption = yr
+    )
+    
+    # Convert year_adoption to factor with all levels found in the original data
+    pred_data$year_adoption <- factor(pred_data$year_adoption, levels = actual_years)
+    
+    # Safe prediction using model.matrix to handle factors correctly
+    X <- model.matrix(~ education_distance_signed + 
+                        wage_distance_signed + 
+                        I(education_distance_signed^2) + 
+                        I(wage_distance_signed^2) + 
+                        factor(year_adoption), 
+                      data = pred_data)
+    
+    # Predict values safely
+    tryCatch({
+      # Use only the columns that match the coefficient names
+      coef_names <- names(coefs)
+      X_matched <- X[, colnames(X) %in% coef_names, drop = FALSE]
+      
+      # Add intercept if missing
+      if (!("(Intercept)" %in% colnames(X_matched)) && "(Intercept)" %in% coef_names) {
+        X_matched <- cbind(1, X_matched)
+        colnames(X_matched)[1] <- "(Intercept)"
+      }
+      
+      # Keep only coefficients that match columns in X_matched
+      coefs_matched <- coefs[names(coefs) %in% colnames(X_matched)]
+      
+      # Calculate predicted values manually
+      linear_pred <- as.numeric(X_matched %*% coefs_matched)
+      pred_data$predicted <- exp(linear_pred)  # Apply exponential for Poisson link
+      
+      # Create plot
+      p <- ggplot(pred_data, aes(x = wage_distance_signed/1000, y = predicted)) +
+        geom_line(size = 1.2, color = "#CC3366") +
+        geom_vline(xintercept = critical_wage/1000, linetype = "dashed", color = "blue") +
+        labs(title = paste("Effect of Wage Distance in", yr),
+             subtitle = paste("Critical point at x =", round(critical_wage/1000, 2), "k"),
+             x = "Wage Distance (thousands, signed)",
+             y = "Predicted Diffusion (count)") +
+        theme_minimal(base_size = 12) +
+        theme(
+          plot.title = element_text(face = "bold", size = 14),
+          plot.subtitle = element_text(size = 12),
+          axis.title = element_text(face = "bold"),
+          panel.grid.minor = element_blank()
+        )
+      
+      wage_plots[[as.character(yr)]] <- p
+    }, error = function(e) {
+      message(sprintf("Error creating wage plot for year %d: %s", yr, e$message))
+    })
+  }
+  
+  # 3. Combined effect using the most recent year (to avoid factor level issues)
+  message("Creating combined effect plot...")
+  recent_year <- max(actual_years)
+  
+  # Create grid for heatmap
+  grid_size <- 50
+  grid_data <- expand.grid(
+    education_distance_signed = seq(min(data$education_distance_signed, na.rm = TRUE),
+                                    max(data$education_distance_signed, na.rm = TRUE),
+                                    length.out = grid_size),
+    wage_distance_signed = seq(min(data$wage_distance_signed, na.rm = TRUE),
+                               max(data$wage_distance_signed, na.rm = TRUE),
+                               length.out = grid_size),
+    year_adoption = recent_year
+  )
+  
+  # Convert year_adoption to factor with all levels found in the original data
+  grid_data$year_adoption <- factor(grid_data$year_adoption, levels = actual_years)
+  
+  combined_plot <- NULL
+  
+  # Safe prediction using model.matrix to handle factors correctly
+  tryCatch({
+    # Create model matrix
+    X <- model.matrix(~ education_distance_signed + 
+                        wage_distance_signed + 
+                        I(education_distance_signed^2) + 
+                        I(wage_distance_signed^2) + 
+                        factor(year_adoption), 
+                      data = grid_data)
+    
+    # Use only the columns that match the coefficient names
+    coef_names <- names(coefs)
+    X_matched <- X[, colnames(X) %in% coef_names, drop = FALSE]
+    
+    # Add intercept if missing
+    if (!("(Intercept)" %in% colnames(X_matched)) && "(Intercept)" %in% coef_names) {
+      X_matched <- cbind(1, X_matched)
+      colnames(X_matched)[1] <- "(Intercept)"
+    }
+    
+    # Keep only coefficients that match columns in X_matched
+    coefs_matched <- coefs[names(coefs) %in% colnames(X_matched)]
+    
+    # Calculate predicted values manually
+    linear_pred <- as.numeric(X_matched %*% coefs_matched)
+    grid_data$predicted <- exp(linear_pred)  # Apply exponential for Poisson link
+    
+    # Create heatmap
+    combined_plot <- ggplot(grid_data, aes(x = education_distance_signed, 
+                                           y = wage_distance_signed/1000, 
+                                           fill = predicted)) +
+      geom_tile() +
+      scale_fill_viridis_c(option = "plasma", name = "Predicted\nDiffusion") +
+      geom_point(x = critical_edu, y = critical_wage/1000, color = "white", size = 3, shape = 4) +
+      annotate("text", x = critical_edu, y = critical_wage/1000 + 10, 
+               label = "Optimal point", color = "white", size = 4) +
+      labs(title = paste("Combined Effect of Distances in", recent_year),
+           subtitle = "Impact on skill diffusion",
+           x = "Educational Distance (signed)",
+           y = "Wage Distance (thousands, signed)") +
+      theme_minimal(base_size = 12) +
+      theme(
+        plot.title = element_text(face = "bold", size = 14),
+        plot.subtitle = element_text(size = 12),
+        axis.title = element_text(face = "bold"),
+        panel.grid = element_blank()
+      )
+  }, error = function(e) {
+    message(sprintf("Error creating combined plot: %s", e$message))
+  })
+  
+  # 4. Create a patchwork of all year plots (education effect) if we have any
+  if (length(edu_plots) > 0) {
+    edu_combined <- wrap_plots(edu_plots, ncol = 2) +
+      plot_annotation(
+        title = 'Educational Distance Effect by Year',
+        subtitle = 'How educational differences affect skill diffusion over time',
+        theme = theme(
+          plot.title = element_text(size = 16, face = "bold"),
+          plot.subtitle = element_text(size = 12)
+        )
+      )
+  } else {
+    edu_combined <- NULL
+    message("No education plots were created successfully.")
+  }
+  
+  # Combine all wage distance plots if we have any
+  if (length(wage_plots) > 0) {
+    wage_combined <- wrap_plots(wage_plots, ncol = 2) +
+      plot_annotation(
+        title = 'Wage Distance Effect by Year',
+        subtitle = 'How wage differences affect skill diffusion over time',
+        theme = theme(
+          plot.title = element_text(size = 16, face = "bold"),
+          plot.subtitle = element_text(size = 12)
+        )
+      )
+  } else {
+    wage_combined <- NULL
+    message("No wage plots were created successfully.")
+  }
+  
+  # Save all plots to files
+  results_dir <- "model_visualizations"
+  dir.create(results_dir, showWarnings = FALSE)
+  
+  # Save individual plots by year
+  for (yr in names(edu_plots)) {
+    ggsave(file.path(results_dir, paste0("edu_effect_", yr, ".png")), 
+           edu_plots[[yr]], width = 8, height = 6)
+  }
+  
+  for (yr in names(wage_plots)) {
+    ggsave(file.path(results_dir, paste0("wage_effect_", yr, ".png")), 
+           wage_plots[[yr]], width = 8, height = 6)
+  }
+  
+  # Save combined plot if it exists
+  if (!is.null(combined_plot)) {
+    ggsave(file.path(results_dir, "combined_effect.png"), 
+           combined_plot, width = 10, height = 8)
+  }
+  
+  # Save combined year plots if they exist
+  if (!is.null(edu_combined)) {
+    ggsave(file.path(results_dir, "edu_effects_by_year.png"), 
+           edu_combined, width = 16, height = 12)
+  }
+  
+  if (!is.null(wage_combined)) {
+    ggsave(file.path(results_dir, "wage_effects_by_year.png"), 
+           wage_combined, width = 16, height = 12)
+  }
+  
+  message(sprintf("Saved visualization plots to %s", results_dir))
+  
+  return(list(
+    edu_plots = edu_plots,
+    wage_plots = wage_plots,
+    combined_plot = combined_plot,
+    edu_combined = edu_combined,
+    wage_combined = wage_combined
+  ))
+}
 ###############################################################################
 # Function to create and analyze regression model
 ###############################################################################
@@ -869,6 +1270,8 @@ run_diffusion_analysis <- function(skills_data, occupation_data = NULL) {
  
 # # Run the analysis
  results <- run_diffusion_analysis(all_skills_data)
+ 
+ 
  diffusion_data <- results$diffusion_data
 # # Alternatively, load and analyze a previously saved diffusion network
 # diffusion_data <- fread("results/diffusion_network.csv")
