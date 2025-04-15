@@ -1,0 +1,89 @@
+---
+title: "Análisis de Redes de Habilidades basado en RCA"
+subtitle: "Metodología de Alabdulkareem et al. (2018)"
+format: 
+  revealjs:
+    theme: simple
+    slide-number: true
+    logo: "https://www.r-project.org/logo/Rlogo.png"
+---
+
+## Metodología del Paper
+
+- El paper "Unpacking the polarization of workplace skills" (2018) analiza la polarización de habilidades laborales
+- Utiliza datos de O*NET sobre 161 habilidades para 672 ocupaciones
+- Aplica Ventaja Comparativa Revelada (RCA) para identificar habilidades "efectivamente utilizadas"
+- Construye una red de complementariedad entre habilidades
+
+::: {.notes}
+El estudio utiliza datos del Departamento de Trabajo de EE.UU. para analizar cómo las habilidades laborales se polarizan en dos grupos principales, lo que explica la desigualdad económica y la "desaparición" de la clase media.
+:::
+
+## Cálculo de RCA y Complementariedad
+
+::: {.panel-tabset}
+
+### Fórmulas
+
+- **RCA (Ventaja Comparativa Revelada)**:
+  $$RCA(j,s) = \frac{onet(j,s)/\sum_{s'} onet(j,s')}{\sum_{j'} onet(j',s)/\sum_{j',s'} onet(j',s')}$$
+
+- **Uso efectivo**:
+  $$e(j,s) = \begin{cases} 
+  1 & \text{si } RCA(j,s) > 1 \\
+  0 & \text{en otro caso}
+  \end{cases}$$
+
+- **Complementariedad**:
+  $$q(s,s') = \frac{\sum_j e(j,s) \cdot e(j,s')}{\max(\sum_j e(j,s), \sum_j e(j,s'))}$$
+
+### Explicación
+
+- **RCA**: Compara la importancia relativa de una habilidad para una ocupación con su importancia esperada en el agregado
+- **Uso efectivo**: Determina si una ocupación utiliza efectivamente una habilidad (RCA > 1)
+- **Complementariedad**: Mide la probabilidad condicional mínima de que dos habilidades sean utilizadas juntas por la misma ocupación
+
+:::
+
+::: {.notes}
+La metodología RCA se ha utilizado en diversos campos para identificar especializaciones. En este caso, permite identificar qué habilidades son distintivas para cada ocupación, más allá de las habilidades comunes a todas las ocupaciones.
+:::
+
+## Implementación en el Código
+
+```{r}
+#| eval: false
+#| echo: true
+
+# Cálculo de RCA según la fórmula del paper
+rca_data <- importance_data %>%
+  left_join(occupation_sums, by = "O.NET.SOC.Code") %>%
+  left_join(skill_sums, by = "Element.ID") %>%
+  mutate(
+    # Calcular RCA utilizando la fórmula exacta del paper
+    rca = (Data.Value / occupation_sum) / (skill_sum / total_sum),
+    # Indicador para uso efectivo (RCA > 1)
+    effective_use = rca > 1
+  )
+
+# Cálculo de complementariedad entre habilidades
+for(i in 1:nrow(skill_combinations)) {
+  s1 <- skill_combinations$skill1[i]
+  s2 <- skill_combinations$skill2[i]
+  
+  # Encontrar ocupaciones que usan efectivamente ambas habilidades
+  occs_s1 <- effective_use_data$O.NET.SOC.Code[effective_use_data$Element.ID == s1]
+  occs_s2 <- effective_use_data$O.NET.SOC.Code[effective_use_data$Element.ID == s2]
+  
+  # Ocupaciones que usan ambas habilidades (intersección)
+  common_occs <- intersect(occs_s1, occs_s2)
+  
+  # Calcular complementariedad según la fórmula del paper
+  numerator <- length(common_occs)
+  denominator <- max(length(occs_s1), length(occs_s2))
+  
+  if(denominator > 0) {  # Evitar división por cero
+    complementarity <- numerator / denominator
+    # Resto del código...
+  }
+}

@@ -48,10 +48,6 @@ work_activities <- read.delim(here("data", "Work Activities.txt"), sep="\t")
 work_styles <- read.delim(here("data", "Work Styles.txt"), sep="\t")
 occupation_data <- read.delim(here("data", "Occupation Data.txt"), sep="\t")
 
-
-# Nota: Si no se encuentra "Occupation Data.txt" en el repositorio,
-# el código creará datos simulados para ocupaciones
-
 # Revisar la estructura de los datos cargados
 glimpse(skills)
 glimpse(abilities)
