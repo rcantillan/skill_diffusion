@@ -1,0 +1,9 @@
+SKILL DIFFUSION ANALYSIS SUMMARY
+Period: 2015 to 2023
+Number of occupation pairs: 5668
+Number of source occupations: 63
+Number of target occupations: 90
+Total diffusion count: 84387
+Average diffusion per pair: 14.89
+Same cluster pairs: 2810 (49.6%)
+Different cluster pairs: 2858 (50.4%)

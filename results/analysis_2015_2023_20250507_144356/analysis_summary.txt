@@ -1,0 +1,19 @@
+SKILL DIFFUSION AND CLUSTERING ANALYSIS SUMMARY
+Analysis performed on: 2025-05-07 14:44:10.488205
+Period: 2015 to 2023
+Clustering method: louvain
+Distance metric: backbone
+
+CLUSTERING RESULTS:
+- Start year (2015): 2 clusters, 63 occupations
+- End year (2023): 2 clusters, 90 occupations
+- Cluster stability score: NA
+- Adjusted Rand Index: NA
+- Normalized Mutual Information: NA
+
+DIFFUSION RESULTS:
+- Diffusion network: 5668 edges
+- Source occupations: 63
+- Target occupations: 90
+- Total diffusion count: 84387
+- Average diffusion per pair: 14.89
