@@ -1,0 +1,671 @@
+---
+title: "Análisis Descriptivo de Redes de Habilidades y Ocupaciones Basadas en Nivel Requerido (2005-2024)"
+subtitle: ""
+author: "Roberto Cantillan"
+date: today
+format: 
+  html:
+    toc: true
+    toc-depth: 3
+    code-fold: true
+    code-summary: "Mostrar/Ocultar Código"
+    number-sections: true
+    theme: cosmo
+    reference-location: section 
+#csl: apalike.csl 
+#bibliography: references.bib 
+editor: visual
+execute: 
+  warning: false
+  message: false
+---
+
+```{r setup, include=FALSE}
+# Opciones generales de Knitr
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE, fig.width = 8, fig.height = 6)
+
+# Cargar librerías necesarias
+library(tidyverse)
+library(igraph)
+library(data.table)
+library(here)
+library(knitr)
+library(scales) 
+# library(kableExtra) # Descomentar si se usa kable_styling
+```
+
+
+# Introducción
+## Relevancia y Justificación
+
+La persistencia de la segregación ocupacional, a pesar de la disminución de barreras formales, presenta un enigma fundamental en la investigación sobre estratificación [@blau2017]. Comprender los mecanismos subyacentes que reproducen estas desigualdades es crucial. Trabajos recientes han revelado características estructurales clave del mercado laboral que informan este problema desde dos ángulos complementarios:
+
+- Polarización Horizontal: [@alabdulkareem2018] demostraron, utilizando redes de complementariedad de habilidades (basadas en Importancia), que el espacio de habilidades está marcadamente polarizado en dos grandes clústeres: uno sociocognitivo y otro sensorio-físico[source: 5, 94, 106].
+
+- Jerarquía Anidada: [@hosseinioun2025] revelaron una estructura jerárquica y anidada de dependencias direccionales entre habilidades (basadas principalmente en Nivel), inferida a partir de probabilidades condicionales asimétricas[source: 293, 294, 380]. Esta estructura sugiere que la adquisición de habilidades especializadas a menudo depende de habilidades fundamentales previas, creando vías estructuradas para el desarrollo del capital humano[source: 295, 304, 370].
+
+Ambos hallazgos describen la arquitectura estática dentro de la cual ocurren la movilidad y la segregación. Acá proponemos un marco teórico de "Difusión Estructuralmente Condicionada" que busca conectar estas estructuras con los procesos dinámicos a través de los cuales se reproducen, analizando cómo la difusión de habilidades es moldeada por estas estructuras de polarización y dependencia.
+
+## Objetivos de este Análisis
+
+Este documento representa un primer paso empírico en esa agenda. Se enfoca en construir y describir las características básicas de las redes basadas en la complementariedad de habilidades y la similitud ocupacional, adaptando la metodología de [@alabdulkareem2018] para utilizar el Nivel (Level) requerido de las habilidades como métrica base. La elección de "Level" se alinea con el enfoque de [@hosseinioun2025] y la naturaleza secuencial del desarrollo de habilidades, central para el análisis de dependencias y difusión[source: 343]. Específicamente, se construyen y analizan:
+
+- Red de Habilidades (Skillscape - Nivel): Nodos = habilidades, Enlaces = complementariedad $q(s,s')$ calculada a partir de RCA basada en Nivel.
+
+- Red de Ocupaciones (Nivel): Nodos = ocupaciones, Enlaces = similitud $q(j,j')$ basada en habilidades (Nivel) compartidas efectivamente.
+
+Se examinará cómo las propiedades estructurales básicas de estas redes (tamaño, densidad, conectividad, clustering) han evolucionado a lo largo de los períodos 2005-2009, 2010-2014, 2015-2019 y 2020-2024, utilizando datos de O*NET.
+
+# Metodología: Construcción de Redes (Basada en Nivel)
+
+Los scripts implementan los siguientes pasos.
+
+## 1. Preprocesamiento y Cálculo de RCA (Basado en Nivel)
+
+Datos: Se combinan datos de O*NET (Skills, Abilities, Knowledge, Work Activities). Los datos de Work Styles se excluyen ya que solo tienen escala de Importancia.
+
+- Períodos: Se agrupan en bloques de 5 años, usando la observación más reciente por ocupación-habilidad-escala.
+
+- Métrica Base: Se utiliza el Nivel (Scale.ID == "LV") requerido de cada habilidad $s$ en la ocupación $j$, denotado como $Level(j, s)$.
+
+- RCA: Se calcula la Ventaja Comparativa Revelada (RCA) para cada par $(j, s)$ en cada período usando los valores de Nivel: $$ RCA_{Level}(j, s) = \frac{Level(j, s) / \sum_{s'} Level(j, s')}{\sum_{j'} Level(j', s) / \sum_{j', s'} Level(j', s')} $$
+
+- Uso Efectivo: Se define el uso efectivo $e_{Level}(j, s) = 1$ si $RCA_{Level}(j, s) > 1$, y $0$ si no.
+
+
+## 2. Red de Habilidades (Skillscape - Nivel)
+
+Se construye una red no dirigida donde los nodos son habilidades ($s, s'$) y el peso del enlace $q(s, s')$ representa su complementariedad, calculada usando el indicador de uso efectivo basado en Nivel ($e_{Level}$):
+
+$$
+q(s, s') = \frac{\sum_{j} e_{Level}(j, s) \cdot e_{Level}(j, s')}{\max\left(\sum_{j} e_{Level}(j, s), \sum_{j} e_{Level}(j, s')\right)}
+$$
+
+Se utiliza el archivo skill_pairs_level.csv generado por el script 
+
+## 3. Red de Ocupaciones (Nivel)
+
+Se construye una red no dirigida donde los nodos son ocupaciones ($j, j'$) y el peso del enlace $q(j, j')$ representa la similitud de sus perfiles de habilidades (Nivel) efectivamente utilizadas:
+
+$$
+q(j, j') = \frac{\sum_{s} e_{Level}(j, s) \cdot e_{Level}(j', s)}{\max\left(\sum_{s} e_{Level}(j, s), \sum_{s} e_{Level}(j', s)\right)}
+$$
+
+Se utiliza el archivo occupation_pairs_level.csv.
+
+# Análisis Descriptivo de las Redes por Período
+
+
+## Definición de Períodos y Rutas (Basadas en Nivel)
+```{r}
+# Definir los períodos de análisis
+periods <- c("2005-2009", "2010-2014", "2015-2019", "2020-2024")
+
+# Rutas base a carpetas con resultados basados en LEVEL
+skill_network_base_dir <- here::here("skillscape_level_method") 
+occupation_network_base_dir <- here::here("occupation_network_level_method") 
+
+# Cargar datos de títulos de ocupaciones usando el nombre correcto
+occupation_titles_df <- data.table() 
+tryCatch({
+    occ_data_path <- here::here("data", "Occupation Data.txt")
+    if (file.exists(occ_data_path)) {
+        # Leer el archivo COMPLETO primero (asumiendo separador TAB)
+        occ_data_full <- fread(occ_data_path, encoding = "UTF-8", sep = "\t", header = TRUE) 
+
+        # Verificar usando el nombre REAL de la columna
+        expected_cols <- c("O*NET-SOC Code", "Title") # Nombre exacto!
+        
+        if (all(expected_cols %in% names(occ_data_full))) {
+            
+            # Seleccionar y renombrar usando el nombre REAL (con backticks)
+            occupation_titles_df <- occ_data_full[, .(
+                occ_id = `O*NET-SOC Code`, # Backticks necesarios!
+                occ_title = Title
+            )]
+            
+            # Filtrar y procesar...
+            occupation_titles_df <- occupation_titles_df[!is.na(occ_id) & occ_id != "" & !is.na(occ_title) & occ_title != ""]
+            occupation_titles_df <- occupation_titles_df[, .SD[1], by = occ_id] 
+            setkey(occupation_titles_df, occ_id) 
+            cat("Títulos de ocupaciones cargados y procesados correctamente.\n")
+            
+        } else {
+             cat("Error: Columnas 'O*NET-SOC Code' o 'Title' no encontradas en Occupation Data.txt. Columnas presentes:", paste(names(occ_data_full), collapse=", "), "\n")
+             occupation_titles_df <- data.table() 
+        }
+    } else {
+        cat("Archivo Occupation Data.txt no encontrado, se usarán IDs para ocupaciones.\n")
+    }
+}, error = function(e){ 
+    cat("Error procesando títulos de ocupaciones:", e$message, "\n") 
+    occupation_titles_df <- data.table() 
+})
+
+# --- Definición de Funciones Auxiliares ---
+
+# Función para leer CSV 
+read_exported_csv <- function(file_path) {
+   if (!file.exists(file_path)) { warning("Archivo no encontrado: ", file_path); return(NULL) }
+   tryCatch({
+     data <- data.table::fread(file_path, header = TRUE, sep = ";", dec = ".", stringsAsFactors = FALSE, quote = "\"", encoding = "UTF-8")
+     if ("weight" %in% names(data) && !is.numeric(data$weight)) data[, weight := as.numeric(weight)]
+     if ("count" %in% names(data) && !is.integer(data$count)) data[, count := as.integer(count)]
+     if ("max_count" %in% names(data) && !is.integer(data$max_count)) data[, max_count := as.integer(max_count)]
+     return(data)
+   }, error = function(e) { warning("Error leyendo archivo ", file_path, ": ", e$message); return(NULL) })
+}
+
+# Función para calcular estadísticas extendidas
+calculate_network_stats_extended <- function(g, community_algo = cluster_louvain) {
+   stats_base <- list(num_nodes = 0, num_edges = 0, density = NA, avg_path_length = NA, transitivity = NA, components = NA, giant_component_prop = NA, avg_degree = NA, avg_weighted_degree = NA, modularity = NA, num_communities = NA, degree_centralization = NA)
+   if (!is.igraph(g) || vcount(g) == 0) return(stats_base)
+   stats_base$num_nodes = igraph::vcount(g); stats_base$num_edges = igraph::ecount(g)
+   stats_base$density = igraph::edge_density(g, loops = FALSE)
+   is_connected <- igraph::is_connected(g, mode = "weak")
+   components_info <- igraph::components(g, mode = "weak"); stats_base$components <- components_info$no
+   if (!is.na(stats_base$components) && stats_base$components > 0 && stats_base$num_nodes > 0) { 
+       giant_component_nodes <- max(components_info$csize, na.rm = TRUE) 
+       if(is.finite(giant_component_nodes)) { 
+           stats_base$giant_component_prop <- giant_component_nodes / stats_base$num_nodes 
+       } else { stats_base$giant_component_prop <- NA }
+   } else { stats_base$giant_component_prop <- NA }
+   
+   if (stats_base$num_nodes > 1) {
+       if (is_connected) { stats_base$avg_path_length <- tryCatch(igraph::mean_distance(g, directed = FALSE), error=function(e) NA) 
+       } else if (!is.na(stats_base$giant_component_prop) && stats_base$giant_component_prop > 0.9) {
+           giant_nodes_idx <- which(components_info$membership == which.max(components_info$csize))
+           if(length(giant_nodes_idx)>1){ 
+               giant_graph <- igraph::induced_subgraph(g, giant_nodes_idx)
+               if(vcount(giant_graph) > 1) { stats_base$avg_path_length <- tryCatch(igraph::mean_distance(giant_graph, directed = FALSE), error=function(e) NA) } 
+           }
+       } 
+       stats_base$transitivity = tryCatch(igraph::transitivity(g, type = "global"), error=function(e) NA)
+       stats_base$avg_degree = mean(igraph::degree(g), na.rm=TRUE)
+       stats_base$degree_centralization = if(stats_base$num_nodes > 2) { tryCatch(igraph::centr_degree(g, normalized = TRUE)$centralization, error = function(e) NA) } else { NA }
+   }
+   has_weights <- "weight" %in% igraph::edge_attr_names(g)
+   edge_weights <- if(has_weights) E(g)$weight else NULL
+   # Asegurar que edge_weights no contenga NAs o valores no positivos si se usan para cálculos
+   if(has_weights) edge_weights <- edge_weights[is.finite(edge_weights) & edge_weights > 0] else edge_weights <- NULL
+   
+   if (!is.null(edge_weights) && length(edge_weights) == ecount(g)) { # Verificar si aún tenemos pesos válidos
+        stats_base$avg_weighted_degree <- mean(igraph::strength(g, weights = E(g)$weight), na.rm=TRUE) # Strength es robusto
+   } else {
+        stats_base$avg_weighted_degree <- stats_base$avg_degree # Fallback a grado no ponderado si hay problema con pesos
+        has_weights <- FALSE # Indicar que no se usarán pesos para modularidad
+   }
+    
+   if (stats_base$num_edges > 0) {
+       # Pasar pesos a Louvain solo si son válidos
+       current_weights <- if(has_weights) E(g)$weight else NULL
+       comm <- tryCatch({ community_algo(g, weights = current_weights) }, error = function(e) { warning("Error en community_algo: ", e$message); NULL}) 
+       if (!is.null(comm) && inherits(comm, "communities")) { 
+           # Calcular modularidad usando los mismos pesos usados por el algoritmo
+           stats_base$modularity <- tryCatch({ igraph::modularity(comm) }, error = function(e) NA)
+           stats_base$num_communities <- length(comm)
+       } else { stats_base$modularity <- NA; stats_base$num_communities <- NA }
+   } else { stats_base$modularity <- NA; stats_base$num_communities <- stats_base$num_nodes }
+   return(stats_base)
+}
+
+
+# Helper para formatear tablas de centralidad (Skills - CORREGIDO)
+format_cent <- function(cent_vector, name_map) {
+    default_empty <- data.table(rank=integer(), id=character(), name=character(), value=numeric())
+    if(is.null(cent_vector) || length(cent_vector) == 0) return(default_empty)
+    dt <- data.table(id = names(cent_vector), value = cent_vector, key = "id")
+    if(inherits(name_map, "data.table") && nrow(name_map) > 0 && all(c("id", "name") %in% names(name_map))){
+        dt_join_result <- name_map[dt, on = .(id), nomatch=0] 
+        if(nrow(dt_join_result) > 0 && all(c("id", "name", "value") %in% names(dt_join_result))) {
+             dt_join <- dt_join_result[, .(id, name, value)][order(-value)] # Usa 'name' directamente
+        } else { dt_join <- data.table() }
+        missing_ids <- dt[!id %in% dt_join$id]
+        if(nrow(missing_ids) > 0) { missing_ids[, name := id]; dt_join <- rbind(dt_join, missing_ids[,.(id, name, value)])[order(-value)] }
+    } else { dt_join <- dt[, name := id][order(-value)] }
+    if (nrow(dt_join) > 0) dt_join[, rank := 1:.N] else dt_join <- default_empty
+    return(dt_join)
+}
+
+# Helper para formatear tablas de centralidad (Occupations - revisado)
+format_cent_occ <- function(cent_vector, title_map) {
+     default_empty <- data.table(rank=integer(), id=character(), name=character(), value=numeric())
+     if(is.null(cent_vector) || length(cent_vector) == 0) return(default_empty)
+     dt <- data.table(id = names(cent_vector), value = cent_vector, key = "id")
+     if (inherits(title_map, "data.table") && nrow(title_map) > 0) { 
+          if(!all(c("occ_id", "occ_title") %in% names(title_map))) {
+             warning("Cols 'occ_id', 'occ_title' no encontradas. Intentando usar las 2 primeras.")
+             if(ncol(title_map)>=2) setnames(title_map, names(title_map)[1:2], c("occ_id", "occ_title")) else title_map <- data.table() 
+          }
+          if(nrow(title_map) > 0) {
+               setkey(title_map, occ_id)
+               # Usar left join para no perder ocupaciones sin título
+               dt_join <- title_map[dt, on = .(occ_id = id)] # Left join por defecto
+               dt_join[is.na(occ_title), occ_title := occ_id] # Usar ID si falta título
+               dt_join <- dt_join[, .(id = occ_id, name = occ_title, value)][order(-value)] # Seleccionar y ordenar
+          } else { dt_join <- dt[, name := id][order(-value)] } # Fallback a IDs si title_map quedó vacío
+     } else { dt_join <- dt[, name := id][order(-value)] } 
+     if(nrow(dt_join) > 0) dt_join[, rank := 1:.N] else dt_join <- default_empty
+     return(dt_join)
+}
+
+
+# Helper para imprimir tablas de centralidad
+print_centrality_table <- function(cent_data, metric_name, node_type, top_n = 20) {
+    if (is.null(cent_data) || nrow(cent_data) == 0) { cat(paste0("\n(No hay datos de centralidad ", metric_name, " para ", node_type, ")\n")); return() } 
+    cat(paste0("\n#### Top ", top_n, " ", node_type, " por ", metric_name, "\n"))
+    if(all(c("rank", "name", "value") %in% names(cent_data))) {
+        # Asegurarse que 'name' no sea NA antes de seleccionar
+        cent_data[, name := fifelse(is.na(name), id, name)] # Usar ID si el nombre es NA
+        top_nodes <- cent_data %>% arrange(desc(value)) %>% slice_head(n = top_n) %>% mutate(value = scales::scientific(value, digits = 3)) %>% select(Rank = rank, Nombre = name, Valor = value)
+        print(knitr::kable(top_nodes, format = "markdown")); cat("\n") 
+    } else { cat("(Error: Faltan columnas esperadas en datos de centralidad)\n") }
+}
+
+# Almacenar estadísticas y centralidades (inicialización)
+all_stats_level <- list() 
+all_centralities_level <- list() 
+all_opsahl_degrees <- list()
+```
+
+
+## Procesamiento y Análisis por Período (Basado en Nivel)
+```{r}
+# Bucle principal 
+for (period in periods) {
+  cat(paste("\n### Análisis Período:", period, "(Basado en Nivel)\n")) 
+  
+  # --- 1. Creación de Grafos ---
+  cat("\n**1. Creación de Grafos**\n")
+  skill_graph <- NULL; occ_graph <- NULL; 
+  skill_names_map <- data.table(); 
+  skill_pairs_df <- NULL; occ_pairs_df <- NULL 
+  
+  # Grafo Habilidades 
+  skill_file <- file.path(skill_network_base_dir, period, "skill_pairs_level.csv"); skill_pairs_df <- read_exported_csv(skill_file)
+  if (!is.null(skill_pairs_df) && nrow(skill_pairs_df) > 0) {
+       skill_pairs_df[, skill1 := trimws(as.character(skill1))]; skill_pairs_df[, skill2 := trimws(as.character(skill2))]; skill_pairs_df <- skill_pairs_df[!is.na(skill1) & !is.na(skill2) & !is.na(weight) & weight > 0]
+       if (nrow(skill_pairs_df) > 0) {
+           all_skill_nodes <- unique(c(skill_pairs_df$skill1, skill_pairs_df$skill2))
+           if(all(c("name1", "name2") %in% names(skill_pairs_df))) { skill_names_map <- unique(rbind(skill_pairs_df[, .(id = skill1, name = name1)], skill_pairs_df[, .(id = skill2, name = name2)])); skill_names_map <- skill_names_map[!is.na(id) & !is.na(name)]; setkey(skill_names_map, id) } else { cat("Advertencia: Columnas name1/name2 no encontradas en skill_pairs.\n")}
+           skill_graph <- tryCatch({ graph_from_data_frame(d = skill_pairs_df[, .(skill1, skill2, weight)], directed = FALSE, vertices = data.frame(name = all_skill_nodes)) }, error = function(e) { warning("Error grafo hab (Nivel) ", period, ": ", e$message); NULL })
+           if (!is.null(skill_graph)) { skill_graph <- simplify(skill_graph, remove.multiple = TRUE, remove.loops = TRUE, edge.attr.comb = "mean"); cat(sprintf("* Red Hab (Nivel): %d nodos, %d enlaces.\n", vcount(skill_graph), ecount(skill_graph))) } else { cat("* No red hab.\n") }
+       } else { cat("* No pares hab válidos.\n"); skill_pairs_df <- NULL } 
+  } else { cat("* No datos pares hab (Nivel).\n") }
+  
+  # Grafo Ocupaciones 
+  occ_file <- file.path(occupation_network_base_dir, period, "occupation_pairs_level.csv"); occ_pairs_df <- read_exported_csv(occ_file)
+   if (!is.null(occ_pairs_df) && nrow(occ_pairs_df) > 0) {
+       occ_pairs_df[, occupation1 := trimws(as.character(occupation1))]; occ_pairs_df[, occupation2 := trimws(as.character(occupation2))]; occ_pairs_df <- occ_pairs_df[!is.na(occupation1) & !is.na(occupation2) & !is.na(weight) & weight > 0]
+       if (nrow(occ_pairs_df) > 0) {
+           all_occ_nodes <- unique(c(occ_pairs_df$occupation1, occ_pairs_df$occupation2))
+           occ_graph <- tryCatch({ graph_from_data_frame(d = occ_pairs_df[, .(occupation1, occupation2, weight)], directed = FALSE, vertices = data.frame(name = all_occ_nodes)) }, error = function(e) { warning("Error grafo occ (Nivel) ", period, ": ", e$message); NULL })
+           if (!is.null(occ_graph)) { occ_graph <- simplify(occ_graph, remove.multiple = TRUE, remove.loops = TRUE, edge.attr.comb = "mean"); cat(sprintf("* Red Occ (Nivel): %d nodos, %d enlaces.\n", vcount(occ_graph), ecount(occ_graph))) } else { cat("* No red occ.\n") }
+       } else { cat("* No pares occ válidos.\n"); occ_pairs_df <- NULL } 
+   } else { cat("* No datos pares occ (Nivel).\n") }
+
+  # --- 2. Estadísticas Descriptivas y Comunidades ---
+  cat("\n**2. Estadísticas Descriptivas y Comunidades**\n")
+  current_period_stats <- list(
+      skill_network = calculate_network_stats_extended(skill_graph, cluster_louvain), 
+      occupation_network = calculate_network_stats_extended(occ_graph, cluster_louvain)
+  )
+  all_stats_level[[period]] <- current_period_stats 
+  # Impresión de stats
+  cat("\n* **Red Habilidades:**\n"); sk_stats_now <- current_period_stats$skill_network; cat(sprintf("    * Densidad: %.4f; Transitividad: %.4f; Comp.: %s (Gigante: %.3f)\n", sk_stats_now$density %||% NA, sk_stats_now$transitivity %||% NA, sk_stats_now$components %||% "NA", sk_stats_now$giant_component_prop %||% NA)); cat(sprintf("    * Grado Medio: %.2f (Pond: %.2f); Long. Camino: %.2f\n", sk_stats_now$avg_degree %||% NA, sk_stats_now$avg_weighted_degree %||% NA, sk_stats_now$avg_path_length %||% NA)); cat(sprintf("    * Modularidad: %.4f; Nº Comunidades: %s; Centr. Grado: %.4f\n", sk_stats_now$modularity %||% NA, sk_stats_now$num_communities %||% "NA", sk_stats_now$degree_centralization %||% NA))
+  cat("\n* **Red Ocupaciones:**\n"); oc_stats_now <- current_period_stats$occupation_network; cat(sprintf("    * Densidad: %.4f; Transitividad: %.4f; Comp.: %s (Gigante: %.3f)\n", oc_stats_now$density %||% NA, oc_stats_now$transitivity %||% NA, oc_stats_now$components %||% "NA", oc_stats_now$giant_component_prop %||% NA)); cat(sprintf("    * Grado Medio: %.2f (Pond: %.2f); Long. Camino: %.2f\n", oc_stats_now$avg_degree %||% NA, oc_stats_now$avg_weighted_degree %||% NA, oc_stats_now$avg_path_length %||% NA)); cat(sprintf("    * Modularidad: %.4f; Nº Comunidades: %s; Centr. Grado: %.4f\n", oc_stats_now$modularity %||% NA, oc_stats_now$num_communities %||% "NA", oc_stats_now$degree_centralization %||% NA))
+
+  # --- 3. Análisis de Centralidad Ponderada ---
+  cat("\n**3. Análisis de Centralidad (Considerando Pesos)**\n")
+  period_centralities <- list()
+  period_opsahl_degrees <- list() 
+
+  # --- 3.1 Centralidad Red Habilidades ---
+  cat("\n#### Red de Habilidades:\n") 
+  if (!is.null(skill_graph) && vcount(skill_graph) > 0 && ecount(skill_graph) > 0) { 
+      # Fuerza (Grado Ponderado - igraph)
+      str_sk <- strength(skill_graph, weights = E(skill_graph)$weight)
+      cent_str_sk_df <- format_cent(str_sk, skill_names_map)
+      print_centrality_table(cent_str_sk_df, "Fuerza (Grado Ponderado igraph)", "Habilidades")
+      
+      # Grado Generalizado Opsahl (tnet)
+      ops_deg_sk <- NULL 
+       if (!is.null(skill_pairs_df)) {
+          tnet_input_sk <- skill_pairs_df[, .(i = skill1, j = skill2, w = weight)]
+          ops_deg_sk_raw <- tryCatch({ degree_w(tnet_input_sk, measure=c("alpha"), alpha=0.5, type="out") }, error=function(e) NULL)
+          if (!is.null(ops_deg_sk_raw)) { ops_deg_sk <- setNames(ops_deg_sk_raw$output, as.character(ops_deg_sk_raw$node)) }
+       }
+      cent_ops_deg_sk_df <- format_cent(ops_deg_sk, skill_names_map)
+      print_centrality_table(cent_ops_deg_sk_df, "Grado Generalizado (Opsahl α=0.5)", "Habilidades")
+      
+      # Betweenness Ponderada (igraph, usando 1/peso)
+      weights_inv_sk <- 1 / (E(skill_graph)$weight + 1e-9) # Epsilon muy pequeño
+      weights_inv_sk[is.infinite(weights_inv_sk)] <- max(weights_inv_sk[is.finite(weights_inv_sk)], 1e9, na.rm = TRUE) # Reemplazar Inf con un valor grande si es necesario
+      bet_w_sk <- tryCatch({ betweenness(skill_graph, directed = FALSE, weights = weights_inv_sk, normalized = TRUE) }, error = function(e) {warning("Betweenness Ponderada SK falló: ",e$message); NULL})
+      cent_bet_w_sk_df <- format_cent(bet_w_sk, skill_names_map)
+      print_centrality_table(cent_bet_w_sk_df, "Intermediación Ponderada (igraph, 1/peso)", "Habilidades")
+
+      # Betweenness Topológica (igraph, sin ponderar) 
+      bet_uw_sk <- tryCatch({ betweenness(skill_graph, directed = FALSE, weights = NULL, normalized = TRUE) }, error = function(e) {warning("Betweenness Topológica SK falló: ",e$message); NULL})
+      cent_bet_uw_sk_df <- format_cent(bet_uw_sk, skill_names_map)
+      print_centrality_table(cent_bet_uw_sk_df, "Intermediación Topológica (igraph, sin peso)", "Habilidades")
+
+      # Eigenvector Ponderada (igraph)
+      eig_sk <- NULL; comp_sk <- components(skill_graph)
+      if (!is.na(comp_sk$no) && (comp_sk$no == 1 || (!is.na(max(comp_sk$csize)) && vcount(skill_graph)>0 && max(comp_sk$csize)/vcount(skill_graph) > 0.5)) ){ giant_nodes_sk <- which(comp_sk$membership == which.max(comp_sk$csize)); if(length(giant_nodes_sk)>1){ subgraph_sk <- induced_subgraph(skill_graph, giant_nodes_sk); if (ecount(subgraph_sk) > 0) { eig_sk_raw <- tryCatch({ eigen_centrality(subgraph_sk, directed=FALSE, scale=TRUE, weights=E(subgraph_sk)$weight)$vector }, error = function(e) {warning("Eigenvector SK falló: ",e$message); NULL}); if(!is.null(eig_sk_raw) && length(eig_sk_raw)>0) { eig_sk <- setNames(eig_sk_raw, V(subgraph_sk)$name) }}}}
+      cent_eig_sk_df <- format_cent(eig_sk, skill_names_map) 
+      print_centrality_table(cent_eig_sk_df, "Vector Propio Ponderado (igraph)", "Habilidades")
+      
+      # Guardar resultados
+      period_centralities$skills <- list(strength=cent_str_sk_df, opsahl_deg=cent_ops_deg_sk_df, betweenness_w=cent_bet_w_sk_df, betweenness_uw = cent_bet_uw_sk_df, eigenvector=cent_eig_sk_df)
+      
+  } else { cat("\nRed de Habilidades vacía o sin enlaces.\n") }
+
+  # --- 3.2 Centralidad Red Ocupaciones ---
+   cat("\n#### Red de Ocupaciones:\n") 
+   if (!is.null(occ_graph) && vcount(occ_graph) > 0 && ecount(occ_graph) > 0) {
+       # Fuerza (Grado Ponderado - igraph)
+       str_oc <- strength(occ_graph, weights = E(occ_graph)$weight)
+       cent_str_oc_df <- format_cent_occ(str_oc, occupation_titles_df)
+       print_centrality_table(cent_str_oc_df, "Fuerza (Grado Ponderado igraph)", "Ocupaciones")
+       
+       # Grado Generalizado Opsahl (tnet)
+       ops_deg_oc <- NULL
+        if (!is.null(occ_pairs_df)) {
+           tnet_input_occ <- occ_pairs_df[, .(i = occupation1, j = occupation2, w = weight)]
+           ops_deg_occ_raw <- tryCatch({ degree_w(tnet_input_occ, measure=c("alpha"), alpha=0.5, type="out") }, error=function(e) NULL)
+           if (!is.null(ops_deg_occ_raw)) { ops_deg_oc <- setNames(ops_deg_occ_raw$output, as.character(ops_deg_occ_raw$node)) }
+        }
+       cent_ops_deg_oc_df <- format_cent_occ(ops_deg_oc, occupation_titles_df)
+       print_centrality_table(cent_ops_deg_oc_df, "Grado Generalizado (Opsahl α=0.5)", "Ocupaciones")
+       
+       # Betweenness Ponderada (igraph, usando 1/peso)
+       weights_inv_oc <- 1 / (E(occ_graph)$weight + 1e-9) 
+       weights_inv_oc[is.infinite(weights_inv_oc)] <- max(weights_inv_oc[is.finite(weights_inv_oc)], 1e9, na.rm = TRUE) 
+       bet_w_oc <- tryCatch({ betweenness(occ_graph, directed = FALSE, weights = weights_inv_oc, normalized = TRUE) }, error = function(e) {warning("Betweenness Ponderada OC falló: ",e$message); NULL})
+       cent_bet_w_oc_df <- format_cent_occ(bet_w_oc, occupation_titles_df)
+       print_centrality_table(cent_bet_w_oc_df, "Intermediación Ponderada (igraph, 1/peso)", "Ocupaciones")
+
+       # Betweenness Topológica (igraph, sin ponderar)
+       bet_uw_oc <- tryCatch({ betweenness(occ_graph, directed = FALSE, weights = NULL, normalized = TRUE) }, error = function(e) {warning("Betweenness Topológica OC falló: ",e$message); NULL})
+       cent_bet_uw_oc_df <- format_cent_occ(bet_uw_oc, occupation_titles_df)
+       print_centrality_table(cent_bet_uw_oc_df, "Intermediación Topológica (igraph, sin peso)", "Ocupaciones")
+
+       # Eigenvector Ponderada (igraph)
+       eig_oc <- NULL; comp_oc <- components(occ_graph)
+       if (!is.na(comp_oc$no) && (comp_oc$no == 1 || (!is.na(max(comp_oc$csize)) && vcount(occ_graph)>0 && max(comp_oc$csize)/vcount(occ_graph) > 0.5))){ giant_nodes_oc <- which(comp_oc$membership == which.max(comp_oc$csize)); if(length(giant_nodes_oc)>1){ subgraph_oc <- induced_subgraph(occ_graph, giant_nodes_oc); if (ecount(subgraph_oc) > 0) { eig_oc_raw <- tryCatch({ eigen_centrality(subgraph_oc, directed=FALSE, scale=TRUE, weights=E(subgraph_oc)$weight)$vector }, error = function(e) {warning("Eigenvector OC falló: ",e$message); NULL}); if(!is.null(eig_oc_raw) && length(eig_oc_raw)>0) { eig_oc <- setNames(eig_oc_raw, V(subgraph_oc)$name) }}}}
+       cent_eig_oc_df <- format_cent_occ(eig_oc, occupation_titles_df)
+       print_centrality_table(cent_eig_oc_df, "Vector Propio Ponderado (igraph)", "Ocupaciones")
+       
+       # Guardar resultados
+       period_centralities$occupations <- list(strength=cent_str_oc_df, opsahl_deg=cent_ops_deg_oc_df, betweenness_w=cent_bet_w_oc_df, betweenness_uw=cent_bet_uw_oc_df, eigenvector=cent_eig_oc_df)
+       
+  } else { cat("\nRed de Ocupaciones vacía o sin enlaces.\n") }
+  
+  all_centralities_level[[period]] <- period_centralities 
+  # all_opsahl_degrees ya no es necesaria como variable separada si se incluye en period_centralities
+
+} # Fin del bucle for(period in periods)
+```
+
+
+
+## Resumen de Estadísticas de Red por Período (Basado en Nivel)
+```{r}
+# (Código igual que antes para crear y mostrar summary_table_level_formatted)
+summary_table_level <- data.frame(); for (period in periods) { stats_period <- all_stats_level[[period]]; sk_stats <- stats_period$skill_network %||% calculate_network_stats_extended(NULL); oc_stats <- stats_period$occupation_network %||% calculate_network_stats_extended(NULL); summary_table_level <- rbind(summary_table_level, data.frame( Periodo = period, TipoRed = "Habilidades (Compl. - Nivel)", Nodos = sk_stats$num_nodes, Enlaces = sk_stats$num_edges, Densidad = sk_stats$density, Componentes = sk_stats$components, PropCompGigante = sk_stats$giant_component_prop, GradoMedio = sk_stats$avg_degree, Transitividad = sk_stats$transitivity, LongMediaCamino = sk_stats$avg_path_length, Modularidad = sk_stats$modularity, NumComunidades = sk_stats$num_communities, CentralizacionGrado = sk_stats$degree_centralization )); summary_table_level <- rbind(summary_table_level, data.frame( Periodo = period, TipoRed = "Ocupaciones (Simil. - Nivel)", Nodos = oc_stats$num_nodes, Enlaces = oc_stats$num_edges, Densidad = oc_stats$density, Componentes = oc_stats$components, PropCompGigante = oc_stats$giant_component_prop, GradoMedio = oc_stats$avg_degree, Transitividad = oc_stats$transitivity, LongMediaCamino = oc_stats$avg_path_length, Modularidad = oc_stats$modularity, NumComunidades = oc_stats$num_communities, CentralizacionGrado = oc_stats$degree_centralization ))}
+format_num <- function(x, digits = 3) {ifelse(is.na(x), "NA", ifelse(abs(x) < 1e-4 & x != 0, formatC(x, format = "e", digits = digits - 1), formatC(round(x, digits), format = "f", digits = digits, big.mark = ",")))}
+summary_table_level_formatted <- summary_table_level %>% mutate( across(where(is.numeric), ~format_num(., 3))) %>% mutate( Nodos = scales::comma(as.numeric(gsub(",","",Nodos)), accuracy=1), Enlaces = scales::comma(as.numeric(gsub(",","",Enlaces)), accuracy=1), Componentes = ifelse(Componentes=="NA", "NA", scales::comma(as.numeric(gsub(",","",Componentes)), accuracy=1)), NumComunidades = ifelse(NumComunidades=="NA", "NA", scales::comma(as.numeric(gsub(",","",NumComunidades)), accuracy=1)), Densidad = format_num(as.numeric(gsub(",","",Densidad)), 4), Modularidad = format_num(as.numeric(gsub(",","",Modularidad)), 4), CentralizacionGrado = format_num(as.numeric(gsub(",","",CentralizacionGrado)), 4) ) 
+knitr::kable(summary_table_level_formatted, caption = "Estadísticas Descriptivas y Estructurales de las Redes (Basadas en Nivel) por Período", col.names = c("Período", "Tipo Red", "Nodos", "Enlaces", "Densidad", "Comp.", "Prop. Comp. Gig.", "Grado Medio", "Transitividad", "Long. Camino", "Modularidad", "Nº Comunid.", "Centr. Grado"))
+```
+
+
+## Evolución Temporal de Métricas de Red
+```{r}
+# (Código igual que antes para crear el gráfico con ggplot2)
+plot_data <- summary_table_level %>% mutate(across(c(Nodos, Enlaces, Densidad, PropCompGigante, GradoMedio, Transitividad, Modularidad, NumComunidades, CentralizacionGrado), ~suppressWarnings(as.numeric(gsub(",", "", .))))) %>% select(Periodo, TipoRed, Nodos, Enlaces, Densidad, Modularidad, NumComunidades, CentralizacionGrado) %>% pivot_longer(cols = -c(Periodo, TipoRed), names_to = "Metrica", values_to = "Valor") %>% mutate(Periodo = factor(Periodo, levels = periods), TipoRed = factor(TipoRed)) %>% filter(!is.na(Valor)) 
+metrics_to_plot <- c("Nodos", "Enlaces", "Densidad", "Modularidad", "NumComunidades", "CentralizacionGrado")
+plot_data_filtered <- plot_data %>% filter(Metrica %in% metrics_to_plot)
+ggplot(plot_data_filtered, aes(x = Periodo, y = Valor, group = TipoRed, color = TipoRed, linetype = TipoRed, shape = TipoRed)) + geom_line(linewidth = 1) + geom_point(size = 3) + facet_wrap(~Metrica, scales = "free_y", ncol = 3) + scale_color_brewer(palette = "Set1", name = "Tipo de Red") + scale_linetype_discrete(name = "Tipo de Red") + scale_shape_discrete(name = "Tipo de Red") + labs(title = "Evolución Temporal de Métricas Clave de las Redes (Basadas en Nivel)", x = "Período", y = "Valor de la Métrica") + theme_minimal(base_size = 12) + theme(axis.text.x = element_text(angle = 45, hjust = 1), legend.position = "bottom", strip.text = element_text(face = "bold"), plot.title = element_text(hjust = 0.5, face = "bold"))
+```
+
+
+
+## Backbone
+```{r}
+#install.packages("backbone") # Instalar el paquete backbone si no está instalado
+library(backbone)
+```
+
+
+```{r}
+# --- Sección de Análisis de Backbone (Modificada para Excluir Nodos Aislados de las Tablas) ---
+# Objetivo: Extraer la estructura más significativa (backbone) y analizar la centralidad
+# de los nodos CONECTADOS dentro de esa estructura.
+# Método Elegido: Filtro de Disparidad (disparity filter).
+# Justificación: Adecuado para redes ponderadas, identifica enlaces estadísticamente
+# significativos localmente.
+
+# Usaremos el último período para este análisis detallado
+last_period <- periods[length(periods)]
+cat(paste0("\n### Análisis de Backbone y su Centralidad (Período: ", last_period, ") - Solo Nodos Conectados en Tablas\n"))
+
+# --- 1. Recargar/Recrear Grafos del Último Período ---
+# (Esta parte del código es igual a la anterior para cargar los grafos skill_graph_last y occ_graph_last)
+cat(paste0("\n**1. Preparando Grafos del Período ", last_period, "**\n"))
+skill_graph_last <- NULL
+occ_graph_last <- NULL
+skill_pairs_last <- NULL
+occ_pairs_last <- NULL
+skill_names_map_last <- data.table() # Mapa específico para este período si fuera necesario
+
+# Recargar datos de pares de habilidades del último período
+skill_file_last <- file.path(skill_network_base_dir, last_period, "skill_pairs_level.csv")
+skill_pairs_last <- read_exported_csv(skill_file_last)
+if (!is.null(skill_pairs_last) && nrow(skill_pairs_last) > 0) {
+    skill_pairs_last[, skill1 := trimws(as.character(skill1))]
+    skill_pairs_last[, skill2 := trimws(as.character(skill2))]
+    skill_pairs_last <- skill_pairs_last[!is.na(skill1) & !is.na(skill2) & !is.na(weight) & weight > 0]
+    if(nrow(skill_pairs_last) > 0) {
+        all_skill_nodes_last <- unique(c(skill_pairs_last$skill1, skill_pairs_last$skill2))
+         if (exists("skill_names_map") && nrow(skill_names_map) > 0) {
+             skill_names_map_last <- skill_names_map
+         } else if (all(c("name1", "name2") %in% names(skill_pairs_last))) {
+            skill_names_map_last <- unique(rbind(skill_pairs_last[, .(id = skill1, name = name1)], skill_pairs_last[, .(id = skill2, name = name2)]))
+            skill_names_map_last <- skill_names_map_last[!is.na(id) & !is.na(name)]
+            setkey(skill_names_map_last, id)
+         } else {
+             cat("Advertencia: No se pudo crear mapa de nombres de habilidades para el backbone.\n")
+             skill_names_map_last <- data.table(id=character(), name=character())
+         }
+        skill_graph_last <- tryCatch({ graph_from_data_frame(d = skill_pairs_last[, .(skill1, skill2, weight)], directed = FALSE, vertices = data.frame(name = all_skill_nodes_last)) }, error=function(e) { warning("Error creando grafo hab (Nivel) para backbone: ", e$message); NULL })
+        if(!is.null(skill_graph_last)) { skill_graph_last <- simplify(skill_graph_last, remove.multiple = TRUE, remove.loops = TRUE, edge.attr.comb = "mean"); cat(sprintf("* Grafo Hab (Nivel, %s): %d nodos, %d enlaces listos para backbone.\n", last_period, vcount(skill_graph_last), ecount(skill_graph_last))) } else { cat(paste0("* No se pudo crear grafo de habilidades para backbone (", last_period, ").\n")) }
+    } else { cat(paste0("* No hay pares de habilidades válidos para backbone (", last_period, ").\n")) }
+} else { cat(paste0("* No se encontraron datos de pares de habilidades para backbone (", last_period, ").\n")) }
+
+# Recargar datos de pares de ocupaciones del último período
+occ_file_last <- file.path(occupation_network_base_dir, last_period, "occupation_pairs_level.csv")
+occ_pairs_last <- read_exported_csv(occ_file_last)
+if (!is.null(occ_pairs_last) && nrow(occ_pairs_last) > 0) {
+    occ_pairs_last[, occupation1 := trimws(as.character(occupation1))]
+    occ_pairs_last[, occupation2 := trimws(as.character(occupation2))]
+    occ_pairs_last <- occ_pairs_last[!is.na(occupation1) & !is.na(occupation2) & !is.na(weight) & weight > 0]
+    if(nrow(occ_pairs_last) > 0) {
+        all_occ_nodes_last <- unique(c(occ_pairs_last$occupation1, occ_pairs_last$occupation2))
+        occ_graph_last <- tryCatch({ graph_from_data_frame(d = occ_pairs_last[, .(occupation1, occupation2, weight)], directed = FALSE, vertices = data.frame(name = all_occ_nodes_last)) }, error=function(e) { warning("Error creando grafo occ (Nivel) para backbone: ", e$message); NULL })
+        if(!is.null(occ_graph_last)) { occ_graph_last <- simplify(occ_graph_last, remove.multiple = TRUE, remove.loops = TRUE, edge.attr.comb = "mean"); cat(sprintf("* Grafo Occ (Nivel, %s): %d nodos, %d enlaces listos para backbone.\n", last_period, vcount(occ_graph_last), ecount(occ_graph_last))) } else { cat(paste0("* No se pudo crear grafo de ocupaciones para backbone (", last_period, ").\n")) }
+    } else { cat(paste0("* No hay pares de ocupaciones válidos para backbone (", last_period, ").\n")) }
+} else { cat(paste0("* No se encontraron datos de pares de ocupaciones para backbone (", last_period, ").\n")) }
+
+
+# --- 2. Extracción del Backbone y Análisis de Centralidad (Filtrado) ---
+cat("\n**2. Extracción de Backbone y Análisis de Centralidad (Filtrando Nodos Aislados)**\n")
+
+# --- 2.1 Backbone y Centralidad Red Habilidades ---
+cat("\n#### Red de Habilidades\n")
+bb_skill <- NULL
+
+if (!is.null(skill_graph_last) && ecount(skill_graph_last) > 0) {
+    # Parámetro Alpha (ajusta según necesidad)
+    alpha_threshold_skill <- 0.1 # Ejemplo, usa el valor que te funcione mejor
+    cat(paste0("\nExtrayendo Backbone de Habilidades (Disparity Filter, alpha = ", alpha_threshold_skill, ")...\n"))
+    bb_skill <- tryCatch({ backbone::disparity(skill_graph_last, alpha = alpha_threshold_skill, class = "igraph", narrative = TRUE) }, error = function(e) { cat("Error extrayendo backbone de habilidades (Disparity Filter):", e$message, "\n"); NULL })
+
+    if(!is.null(bb_skill) && vcount(bb_skill) > 0 && ecount(bb_skill) > 0) {
+        prop_edges_kept <- ifelse(ecount(skill_graph_last) > 0, 100 * ecount(bb_skill) / ecount(skill_graph_last), 0)
+        cat(sprintf("\n* Backbone Habilidades (Disparity α=%.2f): %d nodos, %d enlaces significativos (%.2f%% del original).\n", alpha_threshold_skill, vcount(bb_skill), ecount(bb_skill), prop_edges_kept))
+
+        # --- Calcular Centralidad y Filtrar Nodos Aislados ---
+        cat("\nCalculando Centralidad (No Ponderada) en Backbone de Habilidades y Filtrando Nodos Aislados...\n")
+
+        # PASO CLAVE: Calcular grados en el backbone e identificar nodos conectados
+        deg_bb_sk_raw <- degree(bb_skill, mode = "all")
+        connected_nodes_sk_ids <- names(deg_bb_sk_raw[deg_bb_sk_raw > 0])
+
+        # Filtrar si hay nodos conectados
+        if (length(connected_nodes_sk_ids) > 0) {
+
+            # Grado (Solo nodos conectados)
+            deg_bb_sk_filtered <- deg_bb_sk_raw[connected_nodes_sk_ids] # Ya tenemos los grados de los conectados
+            cent_deg_bb_sk_df <- format_cent(deg_bb_sk_filtered, skill_names_map_last)
+            print_centrality_table(cent_deg_bb_sk_df, "Grado (Backbone, Solo Conectados)", "Habilidades")
+
+            # Intermediación (Calculada para todos, filtrada para la tabla)
+            bet_bb_sk_raw <- tryCatch(betweenness(bb_skill, directed = FALSE, weights = NULL, normalized = TRUE), error=function(e) {warning("Betweenness (Backbone SK) falló: ",e$message); NULL})
+            if (!is.null(bet_bb_sk_raw)) {
+                 bet_bb_sk_filtered <- bet_bb_sk_raw[names(bet_bb_sk_raw) %in% connected_nodes_sk_ids]
+                 cent_bet_bb_sk_df <- format_cent(bet_bb_sk_filtered, skill_names_map_last)
+                 print_centrality_table(cent_bet_bb_sk_df, "Intermediación (Backbone, Solo Conectados)", "Habilidades")
+            } else { cat("\n(No se pudo calcular Intermediación para Habilidades en Backbone)\n") }
+
+
+            # Vector Propio (Calculado en componente(s) relevante(s), filtrado para la tabla)
+            eig_bb_sk_raw <- NULL
+            comp_bb_sk <- components(bb_skill, mode="weak")
+            # ... (lógica anterior para calcular eig_bb_sk_raw en el componente gigante o grafo conectado) ...
+             if(!is.na(comp_bb_sk$no) && vcount(bb_skill)>0 && ecount(bb_skill)>0) {
+                 if (comp_bb_sk$no == 1) { subgraph_bb_sk <- bb_skill } else {
+                     giant_nodes_idx <- which(comp_bb_sk$membership == which.max(comp_bb_sk$csize))
+                     if (length(giant_nodes_idx) / vcount(bb_skill) > 0.5 && length(giant_nodes_idx) > 1) { subgraph_bb_sk <- induced_subgraph(bb_skill, giant_nodes_idx) } else { subgraph_bb_sk <- NULL }
+                 }
+                 if (!is.null(subgraph_bb_sk) && ecount(subgraph_bb_sk) > 0) {
+                     eig_calc <- tryCatch(eigen_centrality(subgraph_bb_sk, directed=FALSE, scale=TRUE, weights=NULL)$vector, error=function(e) {warning("Eigenvector (Backbone SK) falló: ",e$message); NULL})
+                     if(!is.null(eig_calc) && length(eig_calc)>0) { eig_bb_sk_raw <- setNames(eig_calc, V(subgraph_bb_sk)$name) }
+                 }
+             }
+            #-- Fin lógica cálculo eigenvector --
+
+            if (!is.null(eig_bb_sk_raw)) {
+                # Asegurarse de que los nombres en eig_bb_sk_raw existen antes de filtrar
+                valid_eig_nodes <- names(eig_bb_sk_raw)[names(eig_bb_sk_raw) %in% connected_nodes_sk_ids]
+                if (length(valid_eig_nodes) > 0) {
+                   eig_bb_sk_filtered <- eig_bb_sk_raw[valid_eig_nodes]
+                   cent_eig_bb_sk_df <- format_cent(eig_bb_sk_filtered, skill_names_map_last)
+                   print_centrality_table(cent_eig_bb_sk_df, "Vector Propio (Backbone, Solo Conectados)", "Habilidades")
+                } else { cat("\n(Nodos conectados no encontrados en cálculo de Eigenvector para Habilidades en Backbone)\n") }
+            } else { cat("\n(No se pudo calcular Vector Propio para Habilidades en Backbone)\n") }
+
+        } else {
+             cat("\nNo se encontraron nodos conectados en el backbone de habilidades para calcular centralidad.\n")
+        }
+
+    } else {
+        cat(paste0("Backbone de habilidades no pudo ser extraído, está vacío o no tiene enlaces (alpha = ", alpha_threshold_skill, ").\n"))
+        cat("--> SUGERENCIA: Intenta AUMENTAR el valor de 'alpha_threshold_skill' (e.g., a 0.10 o 0.15) y vuelve a ejecutar.\n")
+    }
+} else {
+    cat("No se pudo crear el grafo de habilidades o no tiene enlaces para extraer el backbone.\n")
+}
+
+
+# --- 2.2 Backbone y Centralidad Red Ocupaciones ---
+cat("\n#### Red de Ocupaciones\n")
+bb_occ <- NULL
+
+if (!is.null(occ_graph_last) && ecount(occ_graph_last) > 0) {
+    # Parámetro Alpha (ajusta según necesidad)
+    alpha_threshold_occ <- 0.1 # Ejemplo, usa el valor que te funcione mejor
+    cat(paste0("\nExtrayendo Backbone de Ocupaciones (Disparity Filter, alpha = ", alpha_threshold_occ, ")...\n"))
+    bb_occ <- tryCatch({ backbone::disparity(occ_graph_last, alpha = alpha_threshold_occ, class = "igraph", narrative = TRUE) }, error = function(e) { cat("Error extrayendo backbone de ocupaciones (Disparity Filter):", e$message, "\n"); NULL })
+
+    if(!is.null(bb_occ) && vcount(bb_occ) > 0 && ecount(bb_occ) > 0) {
+        prop_edges_kept_occ <- ifelse(ecount(occ_graph_last) > 0, 100 * ecount(bb_occ) / ecount(occ_graph_last), 0)
+        cat(sprintf("\n* Backbone Ocupaciones (Disparity α=%.2f): %d nodos, %d enlaces significativos (%.2f%% del original).\n", alpha_threshold_occ, vcount(bb_occ), ecount(bb_occ), prop_edges_kept_occ))
+
+        # --- Calcular Centralidad y Filtrar Nodos Aislados ---
+        cat("\nCalculando Centralidad (No Ponderada) en Backbone de Ocupaciones y Filtrando Nodos Aislados...\n")
+
+        # PASO CLAVE: Calcular grados en el backbone e identificar nodos conectados
+        deg_bb_oc_raw <- degree(bb_occ, mode = "all")
+        connected_nodes_oc_ids <- names(deg_bb_oc_raw[deg_bb_oc_raw > 0])
+
+        # Filtrar si hay nodos conectados
+        if (length(connected_nodes_oc_ids) > 0) {
+
+            # Grado (Solo nodos conectados)
+            deg_bb_oc_filtered <- deg_bb_oc_raw[connected_nodes_oc_ids]
+            cent_deg_bb_oc_df <- format_cent_occ(deg_bb_oc_filtered, occupation_titles_df)
+            print_centrality_table(cent_deg_bb_oc_df, "Grado (Backbone, Solo Conectados)", "Ocupaciones")
+
+            # Intermediación (Calculada para todos, filtrada para la tabla)
+            bet_bb_oc_raw <- tryCatch(betweenness(bb_occ, directed = FALSE, weights = NULL, normalized = TRUE), error=function(e) {warning("Betweenness (Backbone OC) falló: ",e$message); NULL})
+             if (!is.null(bet_bb_oc_raw)) {
+                 bet_bb_oc_filtered <- bet_bb_oc_raw[names(bet_bb_oc_raw) %in% connected_nodes_oc_ids]
+                 cent_bet_bb_oc_df <- format_cent_occ(bet_bb_oc_filtered, occupation_titles_df)
+                 print_centrality_table(cent_bet_bb_oc_df, "Intermediación (Backbone, Solo Conectados)", "Ocupaciones")
+             } else { cat("\n(No se pudo calcular Intermediación para Ocupaciones en Backbone)\n") }
+
+
+            # Vector Propio (Calculado en componente(s) relevante(s), filtrado para la tabla)
+            eig_bb_oc_raw <- NULL
+            comp_bb_oc <- components(bb_occ, mode="weak")
+            # ... (lógica anterior para calcular eig_bb_oc_raw en el componente gigante o grafo conectado) ...
+             if(!is.na(comp_bb_oc$no) && vcount(bb_occ)>0 && ecount(bb_occ)>0) {
+                 if (comp_bb_oc$no == 1) { subgraph_bb_oc <- bb_occ } else {
+                     giant_nodes_idx_oc <- which(comp_bb_oc$membership == which.max(comp_bb_oc$csize))
+                     if (length(giant_nodes_idx_oc) / vcount(bb_occ) > 0.5 && length(giant_nodes_idx_oc) > 1) { subgraph_bb_oc <- induced_subgraph(bb_occ, giant_nodes_idx_oc) } else { subgraph_bb_oc <- NULL }
+                 }
+                  if (!is.null(subgraph_bb_oc) && ecount(subgraph_bb_oc) > 0) {
+                     eig_calc_oc <- tryCatch(eigen_centrality(subgraph_bb_oc, directed=FALSE, scale=TRUE, weights=NULL)$vector, error=function(e) {warning("Eigenvector (Backbone OC) falló: ",e$message); NULL})
+                     if(!is.null(eig_calc_oc) && length(eig_calc_oc)>0) { eig_bb_oc_raw <- setNames(eig_calc_oc, V(subgraph_bb_oc)$name) }
+                 }
+             }
+            #-- Fin lógica cálculo eigenvector --
+
+            if (!is.null(eig_bb_oc_raw)) {
+                 valid_eig_nodes_oc <- names(eig_bb_oc_raw)[names(eig_bb_oc_raw) %in% connected_nodes_oc_ids]
+                 if (length(valid_eig_nodes_oc) > 0) {
+                    eig_bb_oc_filtered <- eig_bb_oc_raw[valid_eig_nodes_oc]
+                    cent_eig_bb_oc_df <- format_cent_occ(eig_bb_oc_filtered, occupation_titles_df)
+                    print_centrality_table(cent_eig_bb_oc_df, "Vector Propio (Backbone, Solo Conectados)", "Ocupaciones")
+                 } else { cat("\n(Nodos conectados no encontrados en cálculo de Eigenvector para Ocupaciones en Backbone)\n") }
+            } else { cat("\n(No se pudo calcular Vector Propio para Ocupaciones en Backbone)\n") }
+
+        } else {
+            cat("\nNo se encontraron nodos conectados en el backbone de ocupaciones para calcular centralidad.\n")
+        }
+
+    } else {
+         cat(paste0("Backbone de ocupaciones no pudo ser extraído, está vacío o no tiene enlaces (alpha = ", alpha_threshold_occ, ").\n"))
+         cat("--> SUGERENCIA: Intenta AUMENTAR el valor de 'alpha_threshold_occ' (e.g., a 0.10 o 0.15) y vuelve a ejecutar.\n")
+    }
+} else {
+    cat("No se pudo crear el grafo de ocupaciones o no tiene enlaces para extraer el backbone.\n")
+}
+
+cat("\n--------------------------------------------------\n")
+cat("(Nota Final: El backbone con Filtro de Disparidad ('disparity') extrae los enlaces cuyos pesos son estadísticamente altos comparados con otros enlaces del mismo nodo. Las tablas de centralidad anteriores muestran solo los nodos que permanecen conectados *dentro* de esta estructura significativa.)\n")
+cat("--------------------------------------------------\n")
+```
+
+
+
+
+
+
+
+
+
+
+
+
