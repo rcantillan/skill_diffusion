@@ -1,0 +1,74 @@
+O*NET 15.1 Database
+February 2011 Release
+---------------------
+
+The current release of the O*NET database is available online at:
+
+http://www.onetcenter.org/database.html
+
+For information on this special Taxonomy Preview release of the O*NET
+database, visit:
+
+http://www.onetcenter.org/db_preview.html
+
+
+New in 15.1
+-----------
+
+The O*NET 15.1 database is the first to feature the O*NET-SOC 2010
+taxonomy, which is compatible with the recently released 2010 SOC
+standard. This release does not feature new data from the O*NET Data
+Collection Program; the next set of updated occupations will be
+delivered in O*NET 16.0, expected in July 2011.
+
+
+For More Information
+--------------------
+
+For comprehensive information on the contents, structure, and
+relationship of the database files, and a history of changes in each
+database release, please consult the O*NET Data Dictionary 15.1:
+
+http://www.onetcenter.org/dl_files/DataDictionary15_1.pdf
+
+
+Files Included
+--------------
+
+The following files are included in this release:
+
+Abilities.txt
+Content Model Reference.txt
+Education, Training, and Experience.txt
+Education, Training, and Experience Categories.txt
+Interests.txt
+Job Zone Reference.txt
+Job Zones.txt
+Knowledge.txt
+Level Scale Anchors.txt
+Occupation Data.txt
+Occupation Level Metadata.txt
+Read Me.txt
+Scales Reference.txt
+Skills.txt
+Survey Booklet Locations.txt
+Task Categories.txt
+Task Ratings.txt
+Task Statements.txt
+Work Activities.txt
+Work Context.txt
+Work Context Categories.txt
+Work Styles.txt
+Work Values.txt
+
+
+Release Information
+-------------------
+
+February 2011 - initial release
+
+
+Contact Us
+----------
+
+Please send any questions or comments to onet@onetcenter.org.
