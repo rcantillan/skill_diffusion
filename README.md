@@ -2,8 +2,6 @@
 
 [![R](https://img.shields.io/badge/R-%3E%3D4.0-blue.svg)](https://www.r-project.org/)
 
-[![O*NET](https://www.google.com/imgres?imgurl=x-raw-image%3A%2F%2F%2Fb133650b996aa4077d1ef947c094d697c4565ab627b4a1884937423cd688a5a2&tbnid=B6RqmQtlM7FU6M&vet=10CAQQxiAoAWoXChMIiKGX5LafkQMVAAAAAB0AAAAAEAY..i&imgrefurl=https%3A%2F%2Fwww.onetcenter.org%2Fdl_files%2Fpaw%2FProducts_at_Work.pdf&docid=hR6SYh2UgLSLXM&w=400&h=175&q=o*net%20logo%20.png&ved=0CAQQxiAoAWoXChMIiKGX5LafkQMVAAAAAB0AAAAAEAY)](https://www.onetcenter.org/)
-
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ## Overview
@@ -53,9 +51,9 @@ Skills high in the nested dependency hierarchy show amplified asymmetries:
 
 | Source | Description | Years |
 |--------|-------------|-------|
-| [O*NET Database](https://www. onetcenter. org/) | Skills, Abilities, Knowledge, Work Activities | 2015–2024 (v15.1 → v29.2) |
+| [O*NET Database](https://www.onetcenter. org/) | Skills, Abilities, Knowledge, Work Activities | 2015–2024 (v15.1 → v29.2) |
 | [BLS OES](https://www.bls.gov/oes/) | Occupational wages and employment | 2015, 2024 |
-| [BLS Education](https://www. bls.gov/emp/tables/education-and-training-by-occupation. htm) | Educational requirements by occupation | 2015–2024 |
+| [BLS Education](https://www.bls.gov/emp/tables/education-and-training-by-occupation.html) | Educational requirements by occupation | 2015–2024 |
 | SOC Crosswalks | Occupational code concordances | 2010–2019 |
 
 ## Repository Structure
