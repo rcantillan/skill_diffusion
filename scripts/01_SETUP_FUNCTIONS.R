@@ -4,7 +4,7 @@
 # ==============================================================================
 
 # Limpiar ambiente
-rm(list = ls())
+#rm(list = ls())
 gc()
 
 # ==============================================================================
@@ -24,12 +24,12 @@ library(cobalt)
 # ==============================================================================
 
 # Directorio de salida (ajustar según tu estructura)
-output_data_dir <- "output/figures"
-output_tables_dir <- "output/tables"
+#output_data_dir <- "output/figures"
+#output_tables_dir <- "output/tables"
 
 # Crear directorios si no existen
-dir.create(output_data_dir, recursive = TRUE, showWarnings = FALSE)
-dir.create(output_tables_dir, recursive = TRUE, showWarnings = FALSE)
+#dir.create(output_data_dir, recursive = TRUE, showWarnings = FALSE)
+#dir.create(output_tables_dir, recursive = TRUE, showWarnings = FALSE)
 
 # Semilla para reproducibilidad
 set.seed(42)

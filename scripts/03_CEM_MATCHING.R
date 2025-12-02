@@ -189,7 +189,7 @@ cem_results <- list(
   )
 )
 
-saveRDS(cem_results, file. path(output_data_dir, "cem_results.rds"))
+#saveRDS(cem_results, file.path(output_data_dir, "cem_results.rds"))
 
 message("\n>>> 03_cem_matching.R completado <<<")
 gc()

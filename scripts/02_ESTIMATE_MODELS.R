@@ -82,7 +82,7 @@ m_only_nest <- feglm(
   fixef = c("source", "target"),
   cluster = c("source", "target")
 )
-
+gc()
 message("Modelo nestedness estimado.  Pseudo R² = ", 
         round(fitstat(m_only_nest, "pr2")[[1]], 4))
 
@@ -188,7 +188,7 @@ models_list <- list(
   )
 )
 
-saveRDS(models_list, file. path(output_data_dir, "models_estimated.rds"))
+#saveRDS(models_list, file.path(output_data_dir, "models_estimated.rds"))
 
 message("\n>>> 02_estimate_models. R completado <<<")
 gc()

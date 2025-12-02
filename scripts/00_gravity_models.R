@@ -14,8 +14,8 @@ library(Matrix)
 library(igraph)
 
 # Cargar datos
-output_data_dir <- "datos_eventos_v12_FINAL"
-dt <- readRDS(file.path(output_data_dir, "all_events_final_enriched_REAL.rds"))
+#output_data_dir <- "datos_eventos_v12_FINAL"
+#dt <- readRDS(file.path(output_data_dir, "all_events_final_enriched_REAL.rds"))
 dt <- final_dt; rm(final_dt)
 setDT(dt)
 

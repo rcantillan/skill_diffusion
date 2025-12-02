@@ -10,10 +10,10 @@ if (!require("pacman")) install.packages("pacman")
 pacman::p_load(data.table, readxl, progress, Matrix, lsa, cluster, igraph, stringr, dplyr, here)
 
 # --- 1. DEFINICIÓN DE RUTAS (AJUSTAR) ---
-path_2015           <- "/home/rober/Descargas/db_15_1"       # Baseline (t0)
-path_2024           <- "/home/rober/Descargas/db_29_2_text" # Outcome (t1)
-crosswalk_data_path <- "/home/rober/Documentos/skill_diffusion/data/crosswalk/"
-data_external_path  <- "/home/rober/Documentos/skill_diffusion/data/"
+path_2015           <- "data/db_15_1"       # Baseline (t0)
+path_2024           <- "data/db_29_2_text" # Outcome (t1)
+crosswalk_data_path <- "data/crosswalk/"
+data_external_path  <- "data/"
 output_data_dir     <- "datos_eventos_v12_FINAL"
 
 if (!dir.exists(output_data_dir)) dir.create(output_data_dir, recursive = TRUE)
@@ -290,9 +290,9 @@ gap_stats <- final_dt[, .(
 print(gap_stats)
 
 # Guardar
-save_path <- file.path(output_data_dir, "all_events_final_enriched_REAL.rds")
-saveRDS(final_dt, save_path)
-message("\n>>> GUARDADO EXITOSO: ", save_path)
+#save_path <- file.path(output_data_dir, "all_events_final_enriched_REAL.rds")
+#saveRDS(final_dt, save_path)
+#message("\n>>> GUARDADO EXITOSO: ", save_path)
 
 # Limpieza Final de Memoria
 rm(list=setdiff(ls(), "final_dt")); gc()

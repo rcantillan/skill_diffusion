@@ -14,7 +14,7 @@ library(ggplot2)
 message(">>> Cargando títulos de ocupaciones desde O*NET <<<")
 
 # Ruta a O*NET 2024 (la misma que usas en tu script)
-path_2024 <- "/home/rober/Descargas/db_29_2_text"
+path_2024 <- "data/db_29_2_text"
 
 # Buscar archivo de ocupaciones
 occ_file <- file.path(path_2024, "Occupation Data.txt")
@@ -141,8 +141,8 @@ p_occ_list <- ggplot(occ_for_plot, aes(x = wage_quintile, y = 1)) +
 
 print(p_occ_list)
 
-ggsave(file.path(output_data_dir, "occupation_quintile_examples.png"),
-       p_occ_list, width = 16, height = 8, dpi = 300)
+#ggsave(file.path(output_data_dir, "occupation_quintile_examples.png"),
+#       p_occ_list, width = 16, height = 8, dpi = 300)
 
 # ==============================================================================
 # TABLA ALTERNATIVA: CON RANGOS DE SALARIO
@@ -199,8 +199,8 @@ p_occ_with_range <- ggplot(occ_for_plot2, aes(x = wage_quintile, y = 1)) +
 
 print(p_occ_with_range)
 
-ggsave(file.path(output_data_dir, "occupation_quintile_with_ranges.png"),
-       p_occ_with_range, width = 18, height = 9, dpi = 300)
+#ggsave(file.path(output_data_dir, "occupation_quintile_with_ranges.png"),
+#       p_occ_with_range, width = 18, height = 9, dpi = 300)
 
 message("\n>>> Figuras guardadas <<<")
 
@@ -265,8 +265,8 @@ p_quintile_nodes <- ggplot(occ_for_viz, aes(x = x, y = y)) +
 
 print(p_quintile_nodes)
 
-ggsave(file. path(output_data_dir, "quintile_nodes_occupations.png"),
-       p_quintile_nodes, width = 18, height = 10, dpi = 300)
+#ggsave(file.path(output_data_dir, "quintile_nodes_occupations.png"),
+#       p_quintile_nodes, width = 18, height = 10, dpi = 300)
 
 
 # ==============================================================================
@@ -288,22 +288,22 @@ p_quintile_gradient <- ggplot(occ_for_viz, aes(x = x, y = y)) +
   # Ocupaciones debajo
   geom_text(aes(y = -0.55, label = occupations), size = 3.3, lineheight = 1.15, vjust = 1) +
   scale_x_continuous(limits = c(0.2, 5.8), breaks = NULL) +
-  scale_y_continuous(limits = c(-1. 6, 0.7), breaks = NULL) +
+  scale_y_continuous(limits = c(-1.6, 0.7), breaks = NULL) +
   labs(
     title = "Wage Quintiles: Representative Occupations",
     subtitle = "Each node represents a wage quintile | Color intensity indicates wage level"
   ) +
   theme_void(base_size = 14) +
   theme(
-    plot. title = element_text(face = "bold", size = 24, hjust = 0.5),
+    plot.title = element_text(face = "bold", size = 24, hjust = 0.5),
     plot.subtitle = element_text(size = 15, hjust = 0.5, color = "grey40"),
     plot.margin = margin(25, 50, 25, 50)
   )
 
 print(p_quintile_gradient)
 
-ggsave(file.path(output_data_dir, "quintile_nodes_gradient.png"),
-       p_quintile_gradient, width = 20, height = 11, dpi = 300)
+#ggsave(file.path(output_data_dir, "quintile_nodes_gradient.png"),
+#       p_quintile_gradient, width = 20, height = 11, dpi = 300)
 
 
 # ==============================================================================
@@ -319,8 +319,8 @@ ggsave(file.path(output_data_dir, "quintile_nodes_gradient.png"),
 p_occ_panel <- ggplot(occ_for_viz, aes(x = x, y = 0)) +
   geom_text(aes(label = occupations), size = 3, lineheight = 1.1) +
   geom_text(aes(y = 0.8, label = wage_quintile), size = 6, fontface = "bold") +
-  geom_text(aes(y = 0.55, label = range_label), size = 2. 8, color = "grey50") +
-  scale_x_continuous(limits = c(0. 5, 5.5)) +
+  geom_text(aes(y = 0.55, label = range_label), size = 2.8, color = "grey50") +
+  scale_x_continuous(limits = c(0.5, 5.5)) +
   scale_y_continuous(limits = c(-0.8, 1)) +
   theme_void() +
   theme(plot.margin = margin(5, 20, 5, 20))
@@ -345,21 +345,21 @@ occ_for_table <- occ_expanded %>%
   group_by(wage_quintile) %>%
   summarise(
     occupations = paste(occ_short, collapse = "\n"),
-    . groups = "drop"
+    .groups = "drop"
   ) %>%
   left_join(quintile_ranges, by = "wage_quintile") %>%
   mutate(x = as.numeric(gsub("Q", "", wage_quintile)))
 
 p_table_clean <- ggplot(occ_for_table, aes(x = x, y = 0)) +
   # Header con quintil y rango
-  geom_tile(aes(y = 1. 2, fill = wage_quintile), height = 0.4, width = 0.9, alpha = 0.3) +
-  geom_text(aes(y = 1. 2, label = paste0(wage_quintile, "\n", range_label)), 
+  geom_tile(aes(y = 1.2, fill = wage_quintile), height = 0.4, width = 0.9, alpha = 0.3) +
+  geom_text(aes(y = 1.2, label = paste0(wage_quintile, "\n", range_label)), 
             size = 4, fontface = "bold", lineheight = 0.9) +
   # Ocupaciones
-  geom_text(aes(label = occupations), size = 3. 2, lineheight = 1.2, vjust = 1) +
+  geom_text(aes(label = occupations), size = 3.2, lineheight = 1.2, vjust = 1) +
   scale_fill_manual(values = pal_quintile, guide = "none") +
   scale_x_continuous(limits = c(0.3, 5.7)) +
-  scale_y_continuous(limits = c(-1. 2, 1. 5)) +
+  scale_y_continuous(limits = c(-1.2, 1.5)) +
   labs(
     title = "Wage Quintile Reference: Example Occupations",
     subtitle = "Use this guide to interpret skill flow patterns between quintiles"
@@ -373,8 +373,8 @@ p_table_clean <- ggplot(occ_for_table, aes(x = x, y = 0)) +
 
 print(p_table_clean)
 
-ggsave(file.path(output_data_dir, "quintile_reference_table.png"),
-       p_table_clean, width = 18, height = 8, dpi = 300)
+#ggsave(file.path(output_data_dir, "quintile_reference_table.png"),
+#       p_table_clean, width = 18, height = 8, dpi = 300)
 
 message(">>> Figuras de referencia de quintiles guardadas <<<")
 
@@ -440,8 +440,8 @@ p_ladder <- ggplot(occ_summary, aes(x = x, y = y)) +
 
 print(p_ladder)
 
-ggsave(file. path(output_data_dir, "quintile_ladder.png"),
-       p_ladder, width = 14, height = 12, dpi = 300)
+#ggsave(file. path(output_data_dir, "quintile_ladder.png"),
+#       p_ladder, width = 14, height = 12, dpi = 300)
 
 
 # ==============================================================================

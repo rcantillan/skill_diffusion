@@ -127,8 +127,8 @@ fig1 <- p1_main / p1_hist + plot_layout(heights = c(4, 1))
 
 print(fig1)
 
-ggsave(file.path(output_data_dir, "fig1_atc_domain.png"), 
-       fig1, width = 11, height = 7, dpi = 300)
+#ggsave(file.path(output_data_dir, "fig1_atc_domain.png"), 
+#       fig1, width = 11, height = 7, dpi = 300)
 
 message("Figura 1 guardada: fig1_atc_domain.png")
 
@@ -243,8 +243,8 @@ fig2 <- p2_main / p2_hist + plot_layout(heights = c(4, 1))
 
 print(fig2)
 
-ggsave(file.path(output_data_dir, "fig2_atc_nestedness.png"), 
-       fig2, width = 11, height = 7, dpi = 300)
+#ggsave(file.path(output_data_dir, "fig2_atc_nestedness.png"), 
+#       fig2, width = 11, height = 7, dpi = 300)
 
 message("Figura 2 guardada: fig2_atc_nestedness. png")
 
@@ -291,8 +291,8 @@ fig3 <- ggplot(effect_within_wide, aes(x = nestedness, y = Asymmetry,
 
 print(fig3)
 
-ggsave(file.path(output_data_dir, "fig3_asymmetry_decomposition.png"), 
-       fig3, width = 9, height = 7, dpi = 300)
+#ggsave(file.path(output_data_dir, "fig3_asymmetry_decomposition.png"), 
+#       fig3, width = 9, height = 7, dpi = 300)
 
 message("Figura 3 guardada: fig3_asymmetry_decomposition.png")
 
@@ -300,11 +300,11 @@ message("Figura 3 guardada: fig3_asymmetry_decomposition.png")
 # GUARDAR PREDICCIONES
 # ==============================================================================
 
-saveRDS(list(
-  pred_domain = pred_domain,
-  pred_nest = pred_nest,
-  effect_within = effect_within_wide
-), file.path(output_data_dir, "predictions_main.rds"))
+#saveRDS(list(
+#  pred_domain = pred_domain,
+#  pred_nest = pred_nest,
+#  effect_within = effect_within_wide
+#), file.path(output_data_dir, "predictions_main.rds"))
 
 message("\n>>> 04_figures_main.R completado <<<")
 gc()

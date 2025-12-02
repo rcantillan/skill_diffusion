@@ -178,8 +178,8 @@ p_combined_rate <- (p_cog_rate | p_phy_rate) / p_legend +
 
 print(p_combined_rate)
 
-ggsave(file. path(output_data_dir, "flow_net_aggregated. png"),
-       p_combined_rate, width = 18, height = 10, dpi = 300)
+#ggsave(file.path(output_data_dir, "flow_net_aggregated. png"),
+#       p_combined_rate, width = 18, height = 10, dpi = 300)
 
 # ==============================================================================
 # FIGURA 2: SMALL MULTIPLES POR SKILL (BASADO EN TASAS)
@@ -293,8 +293,8 @@ p_cog_skills <- wrap_plots(plist_cog, ncol = 3) +
 
 print(p_cog_skills)
 
-ggsave(file. path(output_data_dir, "flow_skills_cognitive.png"),
-       p_cog_skills, width = 14, height = 10, dpi = 300)
+#ggsave(file. path(output_data_dir, "flow_skills_cognitive.png"),
+#       p_cog_skills, width = 14, height = 10, dpi = 300)
 
 # PHYSICAL SKILLS
 skills_phy <- top_skills %>% filter(domain == "Physical") %>% pull(skill_name)
@@ -319,220 +319,9 @@ p_phy_skills <- wrap_plots(plist_phy, ncol = 3) +
 
 print(p_phy_skills)
 
-ggsave(file.path(output_data_dir, "flow_skills_physical.png"),
-       p_phy_skills, width = 14, height = 10, dpi = 300)
+#ggsave(file.path(output_data_dir, "flow_skills_physical.png"),
+#       p_phy_skills, width = 14, height = 10, dpi = 300)
 
-# ==============================================================================
-# FIGURA 3: EJEMPLOS DE OCUPACIONES POR QUINTIL
-# ==============================================================================
-
-message(">>> Generando Ejemplos de Ocupaciones por Quintil <<<")
-
-# Primero verificar qué variables de ocupación existen
-occ_vars <- names(dt_model)[grepl("occ|title|soc", names(dt_model), ignore.case = TRUE)]
-message("Variables de ocupación disponibles: ", paste(occ_vars, collapse = ", "))
-
-# Usar la variable correcta (ajusta según tu dataset)
-# Opciones comunes: s_occ, source_occ, occ_title, s_soc_title, etc. 
-
-# Obtener ocupaciones únicas con sus quintiles
-occ_examples <- dt_model %>%
-  as.data.frame() %>%
-  filter(! is.na(s_wage), !is.na(s_occ)) %>%
-  distinct(s_occ, s_wage) %>%
-  mutate(
-    wage_quintile = suppressWarnings(ggplot2::cut_number(s_wage, n = 5, labels = paste0("Q", 1:5)))
-  ) %>%
-  group_by(wage_quintile) %>%
-  arrange(s_wage) %>%
-  mutate(
-    rank_in_quintile = row_number(),
-    n_in_quintile = n()
-  ) %>%
-  ungroup()
-
-# Seleccionar ejemplos representativos (bajo, medio, alto de cada quintil)
-set.seed(123)
-occ_sample <- occ_examples %>%
-  group_by(wage_quintile) %>%
-  filter(
-    rank_in_quintile == 1 |
-      rank_in_quintile == ceiling(n_in_quintile / 2) |
-      rank_in_quintile == n_in_quintile
-  ) %>%
-  slice_head(n = 5) %>%
-  ungroup() %>%
-  arrange(wage_quintile, s_wage) %>%
-  mutate(
-    occ_label = str_trunc(s_occ, 40),
-    wage_k = paste0("$", round(s_wage / 1000, 0), "k")
-  )
-
-# Versión más limpia: lista de ejemplos
-occ_clean <- occ_examples %>%
-  group_by(wage_quintile) %>%
-  arrange(desc(s_wage)) %>%
-  slice_head(n = 4) %>%
-  mutate(
-    occ_short = str_trunc(s_occ, 35),
-    wage_formatted = scales::dollar(s_wage, accuracy = 1)
-  ) %>%
-  select(wage_quintile, occ_short, wage_formatted) %>%
-  ungroup()
-
-# Imprimir tabla
-message("\n=== EJEMPLOS DE OCUPACIONES POR QUINTIL ===\n")
-for (q in paste0("Q", 1:5)) {
-  message(paste0("\n", q, ":"))
-  occ_q <- occ_clean %>% filter(wage_quintile == q)
-  for (i in 1:nrow(occ_q)) {
-    message(paste0("  • ", occ_q$occ_short[i], " (", occ_q$wage_formatted[i], ")"))
-  }
-}
-
-# Crear figura tipo tabla
-occ_for_plot <- occ_clean %>%
-  group_by(wage_quintile) %>%
-  summarise(
-    occupations = paste(occ_short, collapse = "\n"),
-    . groups = "drop"
-  )
-
-p_occ_list <- ggplot(occ_for_plot, aes(x = wage_quintile, y = 1)) +
-  geom_tile(aes(fill = wage_quintile), alpha = 0.2, color = "grey80", linewidth = 1) +
-  geom_text(aes(label = occupations), size = 3. 5, lineheight = 1. 3, vjust = 0.5) +
-  scale_fill_manual(values = c(
-    Q1 = "#B2182B", Q2 = "#EF8A62", Q3 = "#999999", Q4 = "#67A9CF", Q5 = "#2166AC"
-  ), guide = "none") +
-  scale_y_continuous(limits = c(0. 3, 1.7)) +
-  labs(
-    title = "Representative Occupations by Wage Quintile",
-    subtitle = "Q1 = lowest wages → Q5 = highest wages",
-    x = NULL, y = NULL
-  ) +
-  theme_void(base_size = 14) +
-  theme(
-    plot. title = element_text(face = "bold", size = 20, hjust = 0.5),
-    plot.subtitle = element_text(size = 14, hjust = 0.5, color = "grey40"),
-    axis.text. x = element_text(size = 16, face = "bold", margin = margin(t = 10)),
-    plot.margin = margin(20, 20, 20, 20)
-  )
-
-print(p_occ_list)
-
-ggsave(file. path(output_data_dir, "occupation_quintile_examples.png"),
-       p_occ_list, width = 16, height = 8, dpi = 300)
-
-
-# ==============================================================================
-# FIGURA 4: TABLA LIMPIA DE OCUPACIONES POR QUINTIL
-# ==============================================================================
-
-# Versión más limpia: lista de ejemplos
-occ_clean <- occ_examples %>%
-  group_by(wage_quintile) %>%
-  arrange(desc(s_wage)) %>%
-  slice_head(n = 4) %>%
-  mutate(
-    occ_short = str_trunc(s_occ_title, 35),
-    wage_formatted = scales::dollar(s_wage, accuracy = 1)
-  ) %>%
-  select(wage_quintile, occ_short, wage_formatted) %>%
-  ungroup()
-
-# Imprimir tabla
-message("\n=== EJEMPLOS DE OCUPACIONES POR QUINTIL ===\n")
-for (q in paste0("Q", 1:5)) {
-  message(paste0("\n", q, ":"))
-  occ_q <- occ_clean %>% filter(wage_quintile == q)
-  for (i in 1:nrow(occ_q)) {
-    message(paste0("  • ", occ_q$occ_short[i], " (", occ_q$wage_formatted[i], ")"))
-  }
-}
-
-# Crear figura tipo tabla
-occ_for_plot <- occ_clean %>%
-  group_by(wage_quintile) %>%
-  summarise(
-    occupations = paste(occ_short, collapse = "\n"),
-    . groups = "drop"
-  )
-
-p_occ_list <- ggplot(occ_for_plot, aes(x = wage_quintile, y = 1)) +
-  geom_tile(aes(fill = wage_quintile), alpha = 0.2, color = "grey80", linewidth = 1) +
-  geom_text(aes(label = occupations), size = 3.5, lineheight = 1. 3, vjust = 0.5) +
-  scale_fill_manual(values = c(
-    Q1 = "#B2182B", Q2 = "#EF8A62", Q3 = "#999999", Q4 = "#67A9CF", Q5 = "#2166AC"
-  ), guide = "none") +
-  scale_y_continuous(limits = c(0. 3, 1.7)) +
-  labs(
-    title = "Representative Occupations by Wage Quintile",
-    subtitle = "Q1 = lowest wages → Q5 = highest wages",
-    x = NULL, y = NULL
-  ) +
-  theme_void(base_size = 14) +
-  theme(
-    plot. title = element_text(face = "bold", size = 20, hjust = 0.5),
-    plot.subtitle = element_text(size = 14, hjust = 0. 5, color = "grey40"),
-    axis.text. x = element_text(size = 16, face = "bold", margin = margin(t = 10)),
-    plot.margin = margin(20, 20, 20, 20)
-  )
-
-print(p_occ_list)
-
-ggsave(file. path(output_data_dir, "occupation_quintile_examples.png"),
-       p_occ_list, width = 16, height = 8, dpi = 300)
-
-# ==============================================================================
-# FIGURA 5: COMPOSICIÓN DE OPORTUNIDADES
-# ==============================================================================
-
-message(">>> Generando Composición de Oportunidades <<<")
-
-comp_long <- dt_model %>%
-  as. data.frame() %>%
-  filter(! is.na(s_wage)) %>%
-  mutate(
-    wage_q_src = suppressWarnings(ggplot2::cut_number(s_wage, n = 5, labels = paste0("Q", 1:5)))
-  ) %>%
-  group_by(domain, wage_q_src) %>%
-  summarise(n = n(), .groups = "drop") %>%
-  group_by(domain) %>%
-  mutate(pct = n / sum(n) * 100) %>%
-  ungroup()
-
-pal_quintile <- c(Q1 = "#B2182B", Q2 = "#EF8A62", Q3 = "#F7F7F7", 
-                  Q4 = "#67A9CF", Q5 = "#2166AC")
-
-p_composition <- ggplot(comp_long, aes(x = domain, y = pct, fill = wage_q_src)) +
-  geom_col(width = 0.6, color = "white", linewidth = 0. 5) +
-  geom_text(aes(label = ifelse(pct > 5, paste0(round(pct, 0), "%"), "")),
-            position = position_stack(vjust = 0.5), 
-            size = 5, color = "black", fontface = "bold") +
-  scale_fill_manual(values = pal_quintile, name = "Source\nQuintile") +
-  scale_y_continuous(labels = scales::percent_format(scale = 1)) +
-  labs(
-    title = "Composition of Diffusion Opportunities by Source Quintile",
-    subtitle = "Physical skills originate from low-wage occupations | Cognitive from high-wage",
-    x = "Skill Domain",
-    y = "Percentage of Opportunities",
-    caption = "This explains why raw counts differ from adoption rates"
-  ) +
-  theme_minimal(base_size = 16) +
-  theme(
-    plot.title = element_text(face = "bold", size = 20),
-    plot.subtitle = element_text(size = 14, color = "grey40"),
-    plot.caption = element_text(size = 12, color = "grey50"),
-    axis. title = element_text(size = 15, face = "bold"),
-    axis.text = element_text(size = 14),
-    legend. position = "right",
-    legend.title = element_text(face = "bold")
-  )
-
-print(p_composition)
-
-ggsave(file.path(output_data_dir, "flow_composition.png"),
-       p_composition, width = 10, height = 7, dpi = 300)
 
 # ==============================================================================
 # RESUMEN FINAL
