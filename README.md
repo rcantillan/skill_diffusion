@@ -32,7 +32,7 @@ Where:
 
 ### Interval-Censored Identification Strategy
 
-O*NET's rolling-panel nature (≈20% of occupations updated annually) creates "false zeros" that bias standard event-history estimates. We implement an **interval-censored design** treating adoption as a latent event bounded by observation windows, following [Abrevaya & Muris (2020)](https://doi. org/10.1016/j.jeconom.2019.12.007).
+O-NET's rolling-panel nature (≈20% of occupations updated annually) creates "false zeros" that bias standard event-history estimates. We implement an **interval-censored design** treating adoption as a latent event bounded by observation windows, following [Abrevaya & Muris (2020)](https://doi.org/10.1016/j.jeconom.2019.12.007).
 
 ## Key Findings
 
@@ -232,9 +232,9 @@ source("scripts/06_flow_networks.R")
 Key theoretical and methodological references:
 
 - Alabdulkareem, A., et al. (2018). Unpacking the polarization of workplace skills. *Science Advances*. 
-- Hosseinioun, P., et al. (2025). The skill ladder.  *Working Paper*.
+- Hosseinioun, M., Neffke, F., Zhang, L., & Youn, H. (2025). Skill dependencies uncover nested human capital. *Nature Human Behaviou*r. https://doi.org/10.1038/s41562-024-02093-2
 - Abrevaya, J., & Muris, C. (2020).  Interval-censored regression with fixed effects. *Journal of Econometrics*. 
-- Cheng, S., & Park, B. (2020). Flows and boundaries.  *Social Forces*.
+- Cheng, S., & Park, B. (2020). Flows and Boundaries: A Network Approach to Studying Occupational Mobility in the Labor Market. *American Journal of Sociology*, 126(3), 577-631. https://doi.org/10.1086/712406
 - Xie, Y.  (2015). Assortative mating without assortative preference. *PNAS*. 
 
 ## License
