@@ -51,7 +51,7 @@ Skills high in the nested dependency hierarchy show amplified asymmetries:
 
 | Source | Description | Years |
 |--------|-------------|-------|
-| [O*NET Database](https://www.onetcenter. org/) | Skills, Abilities, Knowledge, Work Activities | 2015–2024 (v15.1 → v29.2) |
+| [O*NET Database](https://www.onetcenter.org/) | Skills, Abilities, Knowledge, Work Activities | 2015–2024 (v15.1 → v29.2) |
 | [BLS OES](https://www.bls.gov/oes/) | Occupational wages and employment | 2015, 2024 |
 | [BLS Education](https://www.bls.gov/emp/tables/education-and-training-by-occupation.html) | Educational requirements by occupation | 2015–2024 |
 | SOC Crosswalks | Occupational code concordances | 2010–2019 |
