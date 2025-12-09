@@ -63,12 +63,16 @@ pred_domain[, ci_high := 1 - exp(-exp(eta + z_90 * se_lp))]
 y_min_1 <- min(pred_domain$ci_low, na.rm = TRUE) * 0.9
 y_max_1 <- max(pred_domain$ci_high, na.rm = TRUE) * 1.1
 
+# ==============================================================================
+# FIGURA 1: ATC POR DOMINIO - FUENTES GRANDES
+# ==============================================================================
+
 # Panel principal
 p1_main <- ggplot(pred_domain, aes(x = x, y = predicted, color = domain, fill = domain)) +
   geom_ribbon(aes(ymin = ci_low, ymax = ci_high), alpha = 0.15, color = NA) +
-  geom_line(linewidth = 1.4) +
+  geom_line(linewidth = 1.6) +
   geom_vline(xintercept = 0, linetype = "dashed", color = "grey30", linewidth = 0.8) +
-  geom_point(data = pred_domain[abs(x) < 0.02], size = 3.5, shape = 21, stroke = 1.5) +
+  geom_point(data = pred_domain[abs(x) < 0.02], size = 4, shape = 21, stroke = 1.8) +
   facet_wrap(~domain, labeller = labeller(
     domain = c(Cognitive = "Cognitive Skills", Physical = "Physical Skills")
   )) +
@@ -83,43 +87,53 @@ p1_main <- ggplot(pred_domain, aes(x = x, y = predicted, color = domain, fill = 
     subtitle = "Predicted adoption probability | ClogLog discrete-time hazard | Two-way FE | 90% CI",
     y = "Predicted Adoption Probability"
   ) +
-  theme_minimal(base_size = 14) +
+  theme_minimal(base_size = 18) +
   theme(
-    plot.title = element_text(face = "bold", size = 16),
-    plot.subtitle = element_text(color = "grey40", size = 11),
-    strip.text = element_text(face = "bold", size = 14),
-    panel.grid.minor = element_blank(),
+    # Títulos
+    plot.title = element_text(face = "bold", size = 24, margin = margin(b = 8)),
+    plot.subtitle = element_text(color = "grey40", size = 16, margin = margin(b = 15)),
+    # Facetas
+    strip.text = element_text(face = "bold", size = 20),
+    # Ejes
     axis.title.x = element_blank(),
-    axis.title.y = element_text(size = 12)
+    axis.title.y = element_text(size = 18, margin = margin(r = 10)),
+    axis.text.x = element_text(size = 16),
+    axis.text.y = element_text(size = 16),
+    # Grid
+    panel.grid.minor = element_blank(),
+    panel.spacing = unit(1.5, "lines")
   )
 
-# Anotaciones
+# Anotaciones (tamaño aumentado)
 annot_1 <- data.frame(
   x = c(-1.5, 1.5, -1.5, 1.5),
   y = rep(y_max_1, 4),
-  label = c("← Downward", "Upward →", "← Downward", "Upward →"),
+  label = c("Downward", "Upward", "Downward", "Upward"),
   domain = c("Cognitive", "Cognitive", "Physical", "Physical")
 )
 
 p1_main <- p1_main +
   geom_text(data = annot_1, aes(x = x, y = y, label = label),
-            size = 4, fontface = "italic", color = "grey40",
+            size = 6, fontface = "italic", color = "grey40",
             vjust = -0.5, inherit.aes = FALSE)
 
-# Histograma
+# Histograma (fuentes aumentadas)
 p1_hist <- ggplot(hist_data[abs(x) <= 2], aes(x = x, fill = domain)) +
   geom_histogram(bins = 60, alpha = 0.7, show.legend = FALSE) +
   geom_vline(xintercept = 0, linetype = "dashed", color = "grey30") +
   facet_wrap(~domain) +
   scale_fill_manual(values = pal_domain) +
   scale_x_continuous(limits = c(-2.1, 2.1), breaks = seq(-2, 2, 1)) +
-  labs(x = "Occupational Status Gap (Target − Source)") +
-  theme_minimal(base_size = 12) +
+  labs(x = "Occupational Status Gap (Target - Source)") +
+  theme_minimal(base_size = 18) +
   theme(
     strip.text = element_blank(),
     panel.grid = element_blank(),
+    axis.title.x = element_text(size = 18, margin = margin(t = 10)),
     axis.title.y = element_blank(),
-    axis.text.y = element_blank()
+    axis.text.x = element_text(size = 16),
+    axis.text.y = element_blank(),
+    panel.spacing = unit(1.5, "lines")
   )
 
 # Combinar
@@ -127,8 +141,8 @@ fig1 <- p1_main / p1_hist + plot_layout(heights = c(4, 1))
 
 print(fig1)
 
-#ggsave(file.path(output_data_dir, "fig1_atc_domain.png"), 
-#       fig1, width = 11, height = 7, dpi = 300)
+ggsave(file.path(output_data_dir, "fig1_atc_domain.png"), 
+       fig1, width = 13, height = 8, dpi = 300)
 
 message("Figura 1 guardada: fig1_atc_domain.png")
 
@@ -177,12 +191,16 @@ pred_nest[, ci_high := 1 - exp(-exp(eta + z_90 * se_lp))]
 y_min_2 <- min(pred_nest$ci_low, na.rm = TRUE) * 0.9
 y_max_2 <- max(pred_nest$ci_high, na.rm = TRUE) * 1.1
 
+# ==============================================================================
+# FIGURA 2: ATC × NESTEDNESS - FUENTES GRANDES
+# ==============================================================================
+
 # Panel principal
 p2_main <- ggplot(pred_nest, aes(x = x, y = predicted, color = nestedness, fill = nestedness)) +
   geom_ribbon(aes(ymin = ci_low, ymax = ci_high), alpha = 0.12, color = NA) +
-  geom_line(linewidth = 1.3) +
-  geom_vline(xintercept = 0, linetype = "dashed", color = "grey30", linewidth = 0.7) +
-  geom_point(data = pred_nest[abs(x) < 0.02], size = 2.5, shape = 21, stroke = 1.2) +
+  geom_line(linewidth = 1.6) +
+  geom_vline(xintercept = 0, linetype = "dashed", color = "grey30", linewidth = 0.8) +
+  geom_point(data = pred_nest[abs(x) < 0.02], size = 4, shape = 21, stroke = 1.8) +
   facet_wrap(~domain, labeller = labeller(
     domain = c(Cognitive = "Cognitive Skills", Physical = "Physical Skills")
   )) +
@@ -197,45 +215,58 @@ p2_main <- ggplot(pred_nest, aes(x = x, y = predicted, color = nestedness, fill 
     subtitle = "Predicted adoption probability | ClogLog discrete-time hazard | Two-way FE | 90% CI",
     y = "Predicted Adoption Probability"
   ) +
-  theme_minimal(base_size = 14) +
+  theme_minimal(base_size = 18) +
   theme(
-    plot.title = element_text(face = "bold", size = 16),
-    plot.subtitle = element_text(color = "grey40", size = 11),
-    strip.text = element_text(face = "bold", size = 14),
+    # Títulos
+    plot.title = element_text(face = "bold", size = 24, margin = margin(b = 8)),
+    plot.subtitle = element_text(color = "grey40", size = 16, margin = margin(b = 15)),
+    # Facetas
+    strip.text = element_text(face = "bold", size = 20),
+    # Leyenda
     legend.position = "bottom",
-    legend.title = element_text(face = "bold"),
-    panel.grid.minor = element_blank(),
+    legend.title = element_text(face = "bold", size = 16),
+    legend.text = element_text(size = 14),
+    legend.key.size = unit(1.2, "lines"),
+    # Ejes
     axis.title.x = element_blank(),
-    axis.title.y = element_text(size = 12)
+    axis.title.y = element_text(size = 18, margin = margin(r = 10)),
+    axis.text.x = element_text(size = 16),
+    axis.text.y = element_text(size = 16),
+    # Grid y espaciado
+    panel.grid.minor = element_blank(),
+    panel.spacing = unit(1.5, "lines")
   )
 
-# Anotaciones
+# Anotaciones (tamaño aumentado)
 annot_2 <- data.frame(
   x = c(-1.5, 1.5, -1.5, 1.5),
   y = rep(y_max_2, 4),
-  label = c("← Downward", "Upward →", "← Downward", "Upward →"),
+  label = c("Downward", "Upward", "Downward", "Upward"),
   domain = c("Cognitive", "Cognitive", "Physical", "Physical")
 )
 
 p2_main <- p2_main +
   geom_text(data = annot_2, aes(x = x, y = y, label = label),
-            size = 4, fontface = "italic", color = "grey40",
+            size = 6, fontface = "italic", color = "grey40",
             vjust = -0.5, inherit.aes = FALSE)
 
-# Histograma
+# Histograma (fuentes aumentadas)
 p2_hist <- ggplot(hist_data[abs(x) <= 2], aes(x = x, fill = domain)) +
   geom_histogram(bins = 60, alpha = 0.5, show.legend = FALSE) +
   geom_vline(xintercept = 0, linetype = "dashed", color = "grey30") +
   facet_wrap(~domain) +
   scale_fill_manual(values = pal_domain) +
   scale_x_continuous(limits = c(-2.1, 2.1), breaks = seq(-2, 2, 1)) +
-  labs(x = "Occupational Status Gap (Target − Source)") +
-  theme_minimal(base_size = 12) +
+  labs(x = "Occupational Status Gap (Target - Source)") +
+  theme_minimal(base_size = 18) +
   theme(
     strip.text = element_blank(),
     panel.grid = element_blank(),
+    axis.title.x = element_text(size = 18, margin = margin(t = 10)),
     axis.title.y = element_blank(),
-    axis.text.y = element_blank()
+    axis.text.x = element_text(size = 16),
+    axis.text.y = element_blank(),
+    panel.spacing = unit(1.5, "lines")
   )
 
 # Combinar
@@ -243,11 +274,10 @@ fig2 <- p2_main / p2_hist + plot_layout(heights = c(4, 1))
 
 print(fig2)
 
-#ggsave(file.path(output_data_dir, "fig2_atc_nestedness.png"), 
-#       fig2, width = 11, height = 7, dpi = 300)
+ggsave(file.path(output_data_dir, "fig2_atc_nestedness.png"), 
+       fig2, width = 13, height = 8, dpi = 300)
 
-message("Figura 2 guardada: fig2_atc_nestedness. png")
-
+message("Figura 2 guardada: fig2_atc_nestedness.png")
 # ==============================================================================
 # FIGURA 3: ASYMMETRY DECOMPOSITION
 # ==============================================================================

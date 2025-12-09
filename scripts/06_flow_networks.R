@@ -83,7 +83,7 @@ p_cog_rate <- ggraph(g_cog, layout = "linear") +
     aes(edge_alpha = weight, edge_width = weight, edge_colour = direction),
     strength = 0.3,
     arrow = arrow_sharp,
-    end_cap = circle(10, "mm"),
+    end_cap = circle(9, "mm"),
     linejoin = "mitre",
     lineend = "butt",
     show.legend = FALSE
@@ -123,7 +123,7 @@ p_phy_rate <- ggraph(g_phy, layout = "linear") +
     aes(edge_alpha = weight, edge_width = weight, edge_colour = direction),
     strength = 0.3,
     arrow = arrow_sharp,
-    end_cap = circle(10, "mm"),
+    end_cap = circle(9, "mm"),
     linejoin = "mitre",
     lineend = "butt",
     show.legend = FALSE
@@ -166,8 +166,8 @@ p_legend <- ggplot() +
 p_combined_rate <- (p_cog_rate | p_phy_rate) / p_legend +
   plot_layout(heights = c(10, 1)) +
   plot_annotation(
-    title = "Asymmetric Trajectory Channeling: Adoption Rates by Direction",
-    subtitle = "Edge thickness ∝ adoption rate (not volume) | Arrows indicate diffusion direction",
+    #title = "Asymmetric Trajectory Channeling: Adoption Rates by Direction",
+    subtitle = "Edge thickness proportional to adoption rate | Arrows indicate diffusion direction",
     caption = "Nodes = wage quintiles (Q1 low → Q5 high) | Physical skills face 2x upward friction",
     theme = theme(
       plot.title = element_text(face = "bold", size = 30, hjust = 0.5),
@@ -282,7 +282,7 @@ plist_cog <- plist_cog[!sapply(plist_cog, is.null)]
 p_cog_skills <- wrap_plots(plist_cog, ncol = 3) +
   plot_annotation(
     title = "Cognitive Skills: Top Skills — Adoption Rate Flows",
-    subtitle = "Edge thickness ∝ adoption rate | Arrows show diffusion direction",
+    subtitle = "Edge thickness proportional to adoption rate | Arrows show diffusion direction",
     caption = "Nodes: wage quintiles (Q1 low … Q5 high)"
   ) &
   theme(
@@ -308,7 +308,7 @@ plist_phy <- plist_phy[! sapply(plist_phy, is.null)]
 p_phy_skills <- wrap_plots(plist_phy, ncol = 3) +
   plot_annotation(
     title = "Physical Skills: Top Skills — Adoption Rate Flows",
-    subtitle = "Edge thickness ∝ adoption rate | Arrows show diffusion direction",
+    subtitle = "Edge thickness proportional to adoption rate | Arrows show diffusion direction",
     caption = "Nodes: wage quintiles (Q1 low … Q5 high)"
   ) &
   theme(
